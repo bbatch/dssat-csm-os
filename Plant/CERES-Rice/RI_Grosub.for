@@ -11,6 +11,7 @@ C  08/29/2002 CHP/MUS Converted to modular format for inclusion in CSM.
 C  02/19/2003 CHP Converted dates to YRDOY format
 C  04/02/2008 US/CHP Added P and K models
 C  02/25/2012 JZW PHINT from CUL file (remove from SPE)
+C  02/27/2020 TF Added pest damage
 C-----------------------------------------------------------------------
 C                         DEFINITIONS
 C
@@ -20,25 +21,26 @@ C  LTRANS : True if transplanted (itrans=2 or 3)
 C=======================================================================
 
       SUBROUTINE RI_GROSUB (CONTROL, ISWITCH,
-     &    CO2, CDTT_TP, CUMDTT, DTT, FERTILE, FIELD,      !Input
-     &    FLOOD, FracRts, ISTAGE, ITRANS, LTRANS,         !Input
-     &    NEW_PHASE, NH4, NO3, P1, P1T, P3, P4, PHEFAC,   !Input     
-     &    RLV, RTDEP, SDEPTH, SDTT_TP, SeedFrac,          !Input
-     &    SI3, SOILPROP, SKi_AVAIL, SPi_AVAIL, SRAD, ST,  !Input
-     &    STRCOLD, STRESSW, STRHEAT, SUMDTT, SW, SWFAC,   !Input
-     &    TAGE, TBASE, TF_GRO, TMAX, TMIN, TSGRWT,        !Input
-     &    TURFAC, VegFrac, WSTRES, XSTAGE, XST_TP, YRPLT, !Input
+     &    ASMDOT, CO2, CDTT_TP, CUMDTT, DTT, DISLA,       !Input
+     &    FERTILE, FIELD,  FLOOD, FracRts, ISTAGE,        !Input
+     &    ITRANS, LTRANS, NEW_PHASE, NH4, NO3, P1, P1T,   !Input     
+     &    P3, P4, PHEFAC, PPLTD, RLV, RTDEP, SDEPTH,      !Input
+     &    SDTT_TP, SeedFrac, SI3, SOILPROP, SKi_AVAIL,    !Input
+     &    SPi_AVAIL, SRAD, ST, STRCOLD, STRESSW, STRHEAT, !Input
+     &    SUMDTT, SW, SWIDOT, SWFAC, TAGE, TBASE, TF_GRO, !Input
+     &    TMAX, TMIN, TSGRWT, TURFAC, VegFrac, WLIDOT,    !Input
+     &    WRIDOT,WSIDOT, WSTRES, XSTAGE, XST_TP, YRPLT,   !Input
      &    YRSOW,HARVFRAC,                                 !Input
      &    EMAT, FLOODN, PLANTS, RTWT,                     !I/O
-     &    AGEFAC, APTNUP, BIOMAS, CANNAA, CANWAA, DYIELD, !Output
-     &    GNUP, GPP, GPSM, GRAINN, GRNWT, GRORT,          !Output
-     &    KUptake, KSTRES, LAI,                           !Output
+     &    AGEFAC, APTNUP, AREAH, AREALF, BIOMAS, CANNAA,  !Output
+     &    CANWAA, CARBO, DYIELD, GNUP, GPP, GPSM, GRAINN, !Output
+     &    GRNWT, GRORT, KUptake, KSTRES, LAI,             !Output
      &    LEAFNO, LFWT, MAXLAI, NSTRES, PANWT, PBIOMS,    !Output
      &    PHINT, PLTPOP, PConc_Root, PConc_Seed,          !Output
      &    PConc_Shel, PConc_Shut, PORMIN, PSTRES1,        !Output
      &    PSTRES2, PUptake, RLWR, ROOTN, RTWTO, RWUEP1,   !Output
-     &    RWUMX, SEEDNI, SEEDRV, SENESCE,                 !Output
-     &    SKERWT, STMWT, STMWTO,                          !Output
+     &    RWUMX, SDWT, SEEDNI, SEEDRV, SENESCE,           !Output
+     &    SLA, SKERWT, STMWT, STMWTO,                     !Output
      &    STOVER, STOVN, TANC, TGROGRN, TILNO, TOTNUP,    !Output
      &    CumNUptake, UNH4, UNO3, WTLF, XGNP)             !Output
 
@@ -87,7 +89,7 @@ C=======================================================================
       REAL RANC, RCNP, RESERVE, RGFILL, RLWR
       REAL ROOTN, ROWSPC, RTDEP, RTR, RTWT, RTWTO, RWUEP1, RWUMX
       REAL SDEPTH, SDTT_TP, SDWTPL, SEEDNI  
-      REAL SEEDRV, SENLA, SHOCKFAC, SKERWT, SLAN, SNLFWT 
+      REAL SEEDRV, SENLA, SHOCKFAC, SKERWT, SLA, SLAN, SNLFWT 
       REAL SPACE, SPIKE, SRAD, STMWT, STMWTO, STOVER, STOVN 
       REAL STOVNMIN, STOVWT, STRCOLD, STRESSW, STRHEAT, SUMDTT, SWMIN
       REAL TAGE, TANC, TBASE, TCARBO, TCNP, TEMPM, TFILL, TGPP
@@ -98,6 +100,7 @@ C=======================================================================
       REAL XANC, XGNP, XN, XSTAGE, XST_TP
       REAL HARVFRAC(2)
 
+      REAL DUMMY
       REAL, DIMENSION(6) :: SI3
       REAL TMFAC1(8)
       REAL  CO2X(10), CO2Y(10)
@@ -113,6 +116,7 @@ C=======================================================================
       REAL        CumLeafSenesY   !yesterday's cumul. leaf senescence
       REAL        CumLfNSenes     !cumul. N loss in senesced leaves
       REAL  PODWT, SDWT, SWIDOT, STEM2EAR, WLIDOT, WRIDOT, WSIDOT
+      REAL  ASMDOT, LAIDOT, PPLTD, DISLA, AREALF, AREAH
 !     Proportion of lignin in STOVER and Roots
       REAL PLIGLF, PLIGRT
       REAL SLPF
@@ -185,6 +189,7 @@ C=======================================================================
       MPLA     = 0.5
       MPLAG    = 0.0
       TPLAG    = 0.0
+      SLA      = 0.0
       SLAN     = 0.0    
       SNLFWT   = 0.0    
       LFWT     = 0.001  
@@ -209,7 +214,8 @@ C=======================================================================
       TCARBO   = 0.0     
       CUMPH    = 0.514   
       GRAINN   = 0.0 
-
+      DUMMY    = 0.0
+      
       DYIELD   = 0.0 
       STOVER   = 0.0 
       SEEDNI   = 0.0 
@@ -223,6 +229,17 @@ C=======================================================================
       GPSM     = 0.0
       TCNP     = 0.0
       NSINKT   = 0.0
+
+      AREAH    = 0.0
+      AREALF   = 0.0
+      ASMDOT   = 0.0
+      DISLA    = 0.0
+      LAIDOT   = 0.0
+      PPLTD    = 0.0
+      SWIDOT   = 0.0
+      WRIDOT   = 0.0
+      WSIDOT   = 0.0
+      WLIDOT   = 0.0
 
       WTLF = LFWT * PLTPOP      !Leaf weight, g/m2
       STMWTO = STMWT * PLTPOP   !Stem weight, g/m2
@@ -616,6 +633,10 @@ CCCCC-PW
 
       CARBO = PCARB*AMIN1(PRFT,SWFAC,NSTRES,TSHOCK,PStres1,KSTRES)
      &       * SLPF
+
+      !CERES-Rice Assimilate damage due to pests (TF - 02/27/2020)
+      CARBO = CARBO - ASMDOT
+      CARBO = MAX(CARBO,0.0)
 
       TEMF  = 1.0
       TEMPM = (TMAX + TMIN)*0.5
@@ -1166,6 +1187,16 @@ C
       SENLA  = AMIN1 (SENLA,PLA)
 
       LAI    = (PLA-SENLA)*PLANTS*0.0001
+
+      !CERES-Rice Diseased lAI damage due to pests (TF - 03/04/2020)
+      !LAI - m2/m2, DISLA - cm2/m2
+      AREALF = LAI * 10000
+      AREAH  = AREALF - DISLA
+      AREAH  = MAX(AREAH,0.0)
+
+      LAI    = LAI - (DISLA *0.0001)
+      LAI    = MAX(LAI,0.0)
+
       SNLFWT = SENLA*0.00025                ! V2.1 - .00045->0.00045
 !
       CumLeafSenes = SENLA * 0.00025 * PLTPOP * 10.
@@ -1188,12 +1219,18 @@ C
       ENDIF
 
        
-	WTLF = LFWT * PLTPOP      !Leaf weight, g/m2
+	   WTLF = LFWT * PLTPOP      !Leaf weight, g/m2
       STMWTO = STMWT * PLTPOP   !Stem weight, g/m2
       RTWTO = RTWT * PLTPOP     !Root weight, g/m2
       PODWT = PANWT * PLTPOP    !Panicle weight, g/m2
       SDWT = GRNWT * PLTPOP     !seed weight, g/m2
 
+      IF(WTLF.GT.0) THEN
+          SLA = LAI*10000/WTLF  !Specific leaf area, cm2/g
+          DUMMY = PLA/LFWT
+      ELSE    
+          SLA = 0
+      ENDIF
 
 !      IF (ISWNIT .EQ. 'Y' .AND. XSTAGE .LT. 10.0 .AND. FIELD) THEN
       IF (XSTAGE .LT. 10.0 .AND. FIELD) THEN
@@ -1253,11 +1290,92 @@ C
 
       PBIOMS  = BIOMAS*PLANTS*10.0    !from phenol
 
+!----------------------------------------------------------------------
+!*! Begin CERES-Rice Leaf damage due to pests.
+!*! (TF - 02/26/2020)
+!----------------------------------------------------------------------
+      IF((LFWT+STMWT).GT.0.0) THEN
+        STOVN=STOVN - STOVN*(WLIDOT/PLTPOP)/(LFWT+STMWT)
+      ENDIF
+      IF(PLTPOP.GT.0.0.AND.LFWT.GT.0.0) THEN 
+         LAIDOT = WLIDOT*(PLA-SENLA)/(LFWT)          !cm2/m2/day
+      ENDIF
+      IF(PLTPOP.GT.0.0) THEN
+         LFWT = LFWT - WLIDOT/PLTPOP
+      ENDIF  
+       PLA = PLA - LAIDOT/PLTPOP
+       PLA = MAX(PLA, 0.0)
+       LAI = LAI - LAIDOT/10000
+       LAI = MAX(LAI, 0.0)
+!----------------------------------------------------------------------
+!*! End CERES-Rice Leaf damage due to pests.
+!======================================================================
+!----------------------------------------------------------------------
+!*! Begin CERES-Rice Stem damage due to pests.
+!*! (TF - 02/26/2020)
+!----------------------------------------------------------------------
+      IF(PLTPOP.GT.0.0 .AND. STMWT .GT. 0.0 .AND. WSIDOT .GT. 0.0) THEN
+         STMWT = STMWT - WSIDOT/PLTPOP
+         STMWT = MAX(STMWT, 0.0)
+      ENDIF
+
+      IF(PLTPOP.GT.0.0.AND.(LFWT+STMWT).GT.0.0) THEN
+         STOVN=STOVN - STOVN*(WSIDOT/PLTPOP)/(LFWT+STMWT)  
+      ENDIF
+!----------------------------------------------------------------------
+!*! End CERES-Rice Stem damage due to pests.
+!======================================================================
+!----------------------------------------------------------------------
+!*! Begin CERES-Rice Root damage due to pests.
+!*! (TF - 02/26/2020)
+!----------------------------------------------------------------------
+      IF(PLTPOP.GT.0.0 .AND. RTWT .GT. 0.0 .AND. WRIDOT .GT. 0.0) THEN
+         ROOTN = ROOTN - ROOTN*(WRIDOT/PLTPOP)/RTWT
+         RTWT = RTWT - WRIDOT/PLTPOP
+         RTWT = MAX(RTWT, 0.0)
+      ENDIF
+!----------------------------------------------------------------------
+!*! End CERES-Rice Root damage due to pests.
+!======================================================================
+!----------------------------------------------------------------------
+!*! Begin CERES-Rice Grain Weight and number damage due to pests.
+!*! (TF - 02/26/2020)
+!----------------------------------------------------------------------
+      IF (GRNWT .GT. 0.AND. PLTPOP.GT.0) THEN
+        GRAINN = GRAINN - GRAINN*(SWIDOT/PLTPOP)/GRNWT
+        GPP = GPP - GPP*(SWIDOT/PLTPOP)/GRNWT
+      ENDIF
+      
+      IF(PLTPOP.GT.0.0 .AND. SWIDOT .GT. 0.0) THEN 
+        GRNWT = GRNWT - SWIDOT/PLTPOP
+        GRNWT = MAX(GRNWT, 0.0)
+        PANWT = PANWT - SWIDOT/PLTPOP
+        PANWT = MAX(PANWT, 0.0)
+        !SDWT = SDWT - SWIDOT/PLTPOP
+        !SDWT = MAX(SDWT, 0.0)
+      ENDIF
+!----------------------------------------------------------------------
+!*! End CERES-Rice Grain Weight and number damage due to pests.
+!======================================================================
+!----------------------------------------------------------------------
+!*! Begin CERES-Rice Plants damage due to pests.
+!*! (TF - 02/26/2020)
+!----------------------------------------------------------------------
+      IF(PPLTD.GT.0) THEN
+         PLTPOP = PLTPOP - PLTPOP * PPLTD/100
+         PLTPOP = MAX(PLTPOP, 0.0)
+         LAI = LAI - LAI*(PPLTD/100)
+         LAI = MAX(LAI, 0.0)
+      ENDIF
+!----------------------------------------------------------------------
+!*! End CERES-Rice Plants damage due to pests.
+!======================================================================
+
 !***********************************************************************
       ELSEIF (DYNAMIC .EQ. OUTPUT .OR. DYNAMIC .EQ. SEASEND) THEN
 C-----------------------------------------------------------------------
 !     UPDATED WEIGHTS  
-	WTLF = LFWT * PLTPOP      !Leaf weight, g/m2
+	   WTLF = LFWT * PLTPOP      !Leaf weight, g/m2
       STMWTO = STMWT * PLTPOP   !Stem weight, g/m2
       RTWTO = RTWT * PLTPOP     !Root weight, g/m2
       PODWT = PANWT * PLTPOP    !Panicle weight, g/m2

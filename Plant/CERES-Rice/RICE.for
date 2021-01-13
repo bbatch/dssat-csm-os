@@ -1,10 +1,11 @@
 C=======================================================================
-C COPYRIGHT 1998-2020 
-C                     DSSAT Foundation
-C                     International Fertilizer Development Center
-C                     University of Florida, Gainesville, Florida
-C
-C ALL RIGHTS RESERVED
+C  COPYRIGHT 1998-2010 The University of Georgia, Griffin, Georgia
+C                      University of Florida, Gainesville, Florida
+C                      Iowa State University, Ames, Iowa
+C                      International Center for Soil Fertility and 
+C                       Agricultural Development, Muscle Shoals, Alabama
+C                      University of Guelph, Guelph, Ontario
+C  ALL RIGHTS RESERVED
 C=======================================================================
 C=======================================================================
 C  CERES RICE UPLAND and LOWLAND N MODEL
@@ -42,6 +43,7 @@ C  04/01/2004 CHP/US New PHEFAC calculation
 !  04/02/2008 CHP/US Added P model
 !  04/02/2008 US Added simple K model
 !  04/24/2019 US/JF/CHP Replace G4, G5 with THOT, TCLDP, TCLDF
+!  02/27/2020 TF Added pest damage
 C=======================================================================
 
       SUBROUTINE RICE(CONTROL, ISWITCH,
@@ -109,7 +111,18 @@ C-----------------------------------------------------------------------
 !     Added for K model   
       REAL KUptake(NL), SKi_AVAIL(NL), KSTRES
 
-
+!     Pest Damage variables (TF - 02/27/20)
+      CHARACTER*1     ISWDIS
+      REAL    AREALF,AREAH,CLW,CSW,LAGSD,LNGPEG
+      REAL    SLDOT,SSDOT,WLFDOT
+      REAL    PHTIM(NCOHORTS)
+      REAL    WTSD(NCOHORTS), SDNO(NCOHORTS)
+      REAL    WTSHE(NCOHORTS), SHELN(NCOHORTS)
+      REAL    SDDES(NCOHORTS)
+      REAL    SWIDOT,WSHIDT,ASMDOT,DISLA,NPLTD,PPLTD
+      REAL    WLIDOT,WRIDOT,WSIDOT
+      INTEGER L, NR2
+      REAL VSTAGE, rlv_nw(NL), SLA, CARBO
  
 C-----------------------------------------------------------------------
 C     Initialize
@@ -140,6 +153,7 @@ C-----------------------------------------------------------------------
    
       ISWWAT = ISWITCH % ISWWAT
       ISWNIT = ISWITCH % ISWNIT
+      ISWDIS = ISWITCH % ISWDIS
 
       FLOOD  = FLOODWAT % FLOOD
       BUNDED = FLOODWAT % BUNDED
@@ -161,11 +175,31 @@ C-----------------------------------------------------------------------
      &    TILNO, TOTNUP, TURFAC, XGNP, YRPLT,             !Input
      &    BWAH, PODWT, SDWT, SDWTAH, TOPWT, WTNSD)        !Output
 
+      CALL PEST(CONTROL, ISWITCH, 
+     &    AREALF, CLW, CSW, LAGSD, LNGPEG, NR2, CARBO,    !Input
+     &    PHTIM, PLTPOP, RTWTO, SLA, SLDOT, SOILPROP,     !Input
+     &    SSDOT, STMWTO, TOPWT, WLFDOT, WTLF, YRPLT,      !Input
+     &    rlv_nw, SDNO, SHELN, SWIDOT,                    !Input/Output
+     &    VSTAGE, WSHIDT, WTSD, WTSHE,                    !Input/Output
+     &    ASMDOT, DISLA, NPLTD, PPLTD,                    !Output
+     &    SDDES, WLIDOT, WRIDOT, WSIDOT,SDWT)             !Output
+
 !***********************************************************************
 !***********************************************************************
 !     Seasonal Initialization - Called once per season
 !***********************************************************************
       ELSEIF (DYNAMIC .EQ. SEASINIT) THEN
+
+          IF (ISWDIS.EQ.'Y') THEN
+          CALL PEST(CONTROL, ISWITCH, 
+     &    AREALF, CLW, CSW, LAGSD, LNGPEG, NR2, CARBO,    !Input
+     &    PHTIM, PLTPOP, RTWTO, SLA, SLDOT, SOILPROP,     !Input
+     &    SSDOT, STMWTO, TOPWT, WLFDOT, WTLF, YRPLT,      !Input
+     &    rlv_nw, SDNO, SHELN, SWIDOT,                    !Input/Output
+     &    VSTAGE, WSHIDT, WTSD, WTSHE,                    !Input/Output
+     &    ASMDOT, DISLA, NPLTD, PPLTD,                    !Output
+     &    SDDES, WLIDOT, WRIDOT, WSIDOT,SDWT)             !Output
+          ENDIF
 !-----------------------------------------------------------------------
 C     Call PLANT initialization routine to set variables to 0
 C-----------------------------------------------------------------------
@@ -209,26 +243,27 @@ C-----------------------------------------------------------------------
      &    FLOODN, RTWT,                                   !I/O
      &    RLV, RTDEP, SDEPTH)                             !Output
 
-      CALL RI_GROSUB (CONTROL, ISWITCH,                  !Input 
-     &    CO2, CDTT_TP, CUMDTT, DTT, FERTILE, FIELD,      !Input
-     &    FLOOD, FracRts, ISTAGE, ITRANS, LTRANS,         !Input
-     &    NEW_PHASE, NH4, NO3, P1, P1T, P3, P4, PHEFAC,   !Input     
-     &    RLV, RTDEP, SDEPTH, SDTT_TP, SeedFrac,          !Input
-     &    SI3, SOILPROP, SKi_AVAIL, SPi_AVAIL, SRAD, ST,  !Input
-     &    STRCOLD, STRESSW, STRHEAT, SUMDTT, SW, SWFAC,   !Input
-     &    TAGE, TBASE, TF_GRO, TMAX, TMIN, TSGRWT,        !Input
-     &    TURFAC, VegFrac, WSTRES, XSTAGE, XST_TP, YRPLT, !Input
+      CALL RI_GROSUB (CONTROL, ISWITCH,
+     &    ASMDOT, CO2, CDTT_TP, CUMDTT, DTT, DISLA,       !Input
+     &    FERTILE, FIELD,  FLOOD, FracRts, ISTAGE,        !Input
+     &    ITRANS, LTRANS, NEW_PHASE, NH4, NO3, P1, P1T,   !Input     
+     &    P3, P4, PHEFAC, PPLTD, RLV, RTDEP, SDEPTH,      !Input
+     &    SDTT_TP, SeedFrac, SI3, SOILPROP, SKi_AVAIL,    !Input
+     &    SPi_AVAIL, SRAD, ST, STRCOLD, STRESSW, STRHEAT, !Input
+     &    SUMDTT, SW, SWIDOT, SWFAC, TAGE, TBASE, TF_GRO, !Input
+     &    TMAX, TMIN, TSGRWT, TURFAC, VegFrac, WLIDOT,    !Input
+     &    WRIDOT,WSIDOT, WSTRES, XSTAGE, XST_TP, YRPLT,   !Input
      &    YRSOW,HARVFRAC,                                 !Input
      &    EMAT, FLOODN, PLANTS, RTWT,                     !I/O
-     &    AGEFAC, APTNUP, BIOMAS, CANNAA, CANWAA, DYIELD, !Output
-     &    GNUP, GPP, GPSM, GRAINN, GRNWT, GRORT,          !Output
-     &    KUptake, KSTRES, LAI,                           !Output
+     &    AGEFAC, APTNUP, AREAH, AREALF, BIOMAS, CANNAA,  !Output
+     &    CANWAA, CARBO, DYIELD, GNUP, GPP, GPSM, GRAINN, !Output
+     &    GRNWT, GRORT, KUptake, KSTRES, LAI,             !Output
      &    LEAFNO, LFWT, MAXLAI, NSTRES, PANWT, PBIOMS,    !Output
      &    PHINT, PLTPOP, PConc_Root, PConc_Seed,          !Output
      &    PConc_Shel, PConc_Shut, PORMIN, PSTRES1,        !Output
      &    PSTRES2, PUptake, RLWR, ROOTN, RTWTO, RWUEP1,   !Output
-     &    RWUMX, SEEDNI, SEEDRV, SENESCE,                 !Output
-     &    SKERWT, STMWT, STMWTO,                          !Output
+     &    RWUMX, SDWT, SEEDNI, SEEDRV, SENESCE,           !Output
+     &    SLA, SKERWT, STMWT, STMWTO,                     !Output
      &    STOVER, STOVN, TANC, TGROGRN, TILNO, TOTNUP,    !Output
      &    CumNUptake, UNH4, UNO3, WTLF, XGNP)             !Output
      
@@ -255,6 +290,26 @@ C-----------------------------------------------------------------------
 
 !***********************************************************************
 !***********************************************************************
+!                 DYNAMIC = RATE
+!***********************************************************************
+
+
+      ELSEIF(DYNAMIC.EQ.RATE) THEN
+
+
+        IF (ISWDIS.EQ.'Y') THEN
+          CALL PEST(CONTROL, ISWITCH, 
+     &    AREALF, CLW, CSW, LAGSD, LNGPEG, NR2, CARBO,    !Input
+     &    PHTIM, PLTPOP, RTWTO, SLA, SLDOT, SOILPROP,     !Input
+     &    SSDOT, STMWTO, TOPWT, WLFDOT, WTLF, YRPLT,      !Input
+     &    RLV, SDNO, SHELN, SWIDOT,                       !Input/Output
+     &    VSTAGE, WSHIDT, WTSD, WTSHE,                    !Input/Output
+     &    ASMDOT, DISLA, NPLTD, PPLTD,                    !Output
+     &    SDDES, WLIDOT, WRIDOT, WSIDOT,SDWT)             !Output
+        ENDIF
+
+!***********************************************************************
+!***********************************************************************
 !     Daily rate / integration calculations
 !***********************************************************************
       ELSEIF (DYNAMIC .EQ. INTEGR) THEN
@@ -266,6 +321,20 @@ C        EDATE = Emergence Date
 C        MDATE = Maturity Date
 C        YRDOY = Year - Day of Year (Dynamic Variable)
 C-----------------------------------------------------------------------
+C        Call Pest routine
+C-----------------------------------------------------------------------
+
+        IF (ISWDIS.EQ.'Y') THEN
+          CALL PEST(CONTROL, ISWITCH, 
+     &    AREALF, CLW, CSW, LAGSD, LNGPEG, NR2, CARBO,    !Input
+     &    PHTIM, PLTPOP, RTWTO, SLA, SLDOT, SOILPROP,     !Input
+     &    SSDOT, STMWTO, TOPWT, WLFDOT, WTLF, YRPLT,      !Input
+     &    RLV, SDNO, SHELN, SWIDOT,                       !Input/Output
+     &    VSTAGE, WSHIDT, WTSD, WTSHE,                    !Input/Output
+     &    ASMDOT, DISLA, NPLTD, PPLTD,                    !Output
+     &    SDDES, WLIDOT, WRIDOT, WSIDOT,SDWT)             !Output
+        ENDIF
+        
 !     Zero N, P and K uptake arrays (NUPTAK not always called)
         UNO3 = 0.0
         UNH4 = 0.0
@@ -336,26 +405,27 @@ C--------------------------------------------------------------
 C        Call Growth and Root Growth Routines
 C--------------------------------------------------------------
 
-      CALL RI_GROSUB (CONTROL, ISWITCH,                   !Input  
-     &    CO2, CDTT_TP, CUMDTT, DTT, FERTILE, FIELD,      !Input
-     &    FLOOD, FracRts, ISTAGE, ITRANS, LTRANS,         !Input
-     &    NEW_PHASE, NH4, NO3, P1, P1T, P3, P4, PHEFAC,   !Input     
-     &    RLV, RTDEP, SDEPTH, SDTT_TP, SeedFrac,          !Input
-     &    SI3, SOILPROP, SKi_AVAIL, SPi_AVAIL, SRAD, ST,  !Input
-     &    STRCOLD, STRESSW, STRHEAT, SUMDTT, SW, SWFAC,   !Input
-     &    TAGE, TBASE, TF_GRO, TMAX, TMIN, TSGRWT,        !Input
-     &    TURFAC, VegFrac, WSTRES, XSTAGE, XST_TP, YRPLT, !Input
-     &    YRSOW, HARVFRAC,                                 !Input
+       CALL RI_GROSUB (CONTROL, ISWITCH,
+     &    ASMDOT, CO2, CDTT_TP, CUMDTT, DTT, DISLA,       !Input
+     &    FERTILE, FIELD,  FLOOD, FracRts, ISTAGE,        !Input
+     &    ITRANS, LTRANS, NEW_PHASE, NH4, NO3, P1, P1T,   !Input     
+     &    P3, P4, PHEFAC, PPLTD, RLV, RTDEP, SDEPTH,      !Input
+     &    SDTT_TP, SeedFrac, SI3, SOILPROP, SKi_AVAIL,    !Input
+     &    SPi_AVAIL, SRAD, ST, STRCOLD, STRESSW, STRHEAT, !Input
+     &    SUMDTT, SW, SWIDOT, SWFAC, TAGE, TBASE, TF_GRO, !Input
+     &    TMAX, TMIN, TSGRWT, TURFAC, VegFrac, WLIDOT,    !Input
+     &    WRIDOT,WSIDOT, WSTRES, XSTAGE, XST_TP, YRPLT,   !Input
+     &    YRSOW,HARVFRAC,                                 !Input
      &    EMAT, FLOODN, PLANTS, RTWT,                     !I/O
-     &    AGEFAC, APTNUP, BIOMAS, CANNAA, CANWAA, DYIELD, !Output
-     &    GNUP, GPP, GPSM, GRAINN, GRNWT, GRORT,          !Output
-     &    KUptake, KSTRES, LAI,                           !Output
+     &    AGEFAC, APTNUP, AREAH, AREALF, BIOMAS, CANNAA,  !Output
+     &    CANWAA, CARBO, DYIELD, GNUP, GPP, GPSM, GRAINN, !Output
+     &    GRNWT, GRORT, KUptake, KSTRES, LAI,             !Output
      &    LEAFNO, LFWT, MAXLAI, NSTRES, PANWT, PBIOMS,    !Output
      &    PHINT, PLTPOP, PConc_Root, PConc_Seed,          !Output
      &    PConc_Shel, PConc_Shut, PORMIN, PSTRES1,        !Output
      &    PSTRES2, PUptake, RLWR, ROOTN, RTWTO, RWUEP1,   !Output
-     &    RWUMX, SEEDNI, SEEDRV, SENESCE,                 !Output
-     &    SKERWT, STMWT, STMWTO,                          !Output
+     &    RWUMX, SDWT, SEEDNI, SEEDRV, SENESCE,           !Output
+     &    SLA, SKERWT, STMWT, STMWTO,                     !Output
      &    STOVER, STOVN, TANC, TGROGRN, TILNO, TOTNUP,    !Output
      &    CumNUptake, UNH4, UNO3, WTLF, XGNP)             !Output
 
@@ -368,26 +438,27 @@ C--------------------------------------------------------------
 !***********************************************************************
       ELSEIF (DYNAMIC .EQ. OUTPUT .OR. DYNAMIC .EQ. SEASEND) THEN
 C-----------------------------------------------------------------------
-       CALL RI_GROSUB (CONTROL, ISWITCH,                   !Input  
-     &    CO2, CDTT_TP, CUMDTT, DTT, FERTILE, FIELD,      !Input
-     &    FLOOD, FracRts, ISTAGE, ITRANS, LTRANS,         !Input
-     &    NEW_PHASE, NH4, NO3, P1, P1T, P3, P4, PHEFAC,   !Input     
-     &    RLV, RTDEP, SDEPTH, SDTT_TP, SeedFrac,          !Input
-     &    SI3, SOILPROP, SKi_AVAIL, SPi_AVAIL, SRAD, ST,  !Input
-     &    STRCOLD, STRESSW, STRHEAT, SUMDTT, SW, SWFAC,   !Input
-     &    TAGE, TBASE, TF_GRO, TMAX, TMIN, TSGRWT,        !Input
-     &    TURFAC, VegFrac, WSTRES, XSTAGE, XST_TP, YRPLT, !Input
-     &    YRSOW, HARVFRAC,                                 !Input
+      CALL RI_GROSUB (CONTROL, ISWITCH,
+     &    ASMDOT, CO2, CDTT_TP, CUMDTT, DTT, DISLA,       !Input
+     &    FERTILE, FIELD,  FLOOD, FracRts, ISTAGE,        !Input
+     &    ITRANS, LTRANS, NEW_PHASE, NH4, NO3, P1, P1T,   !Input     
+     &    P3, P4, PHEFAC, PPLTD, RLV, RTDEP, SDEPTH,      !Input
+     &    SDTT_TP, SeedFrac, SI3, SOILPROP, SKi_AVAIL,    !Input
+     &    SPi_AVAIL, SRAD, ST, STRCOLD, STRESSW, STRHEAT, !Input
+     &    SUMDTT, SW, SWIDOT, SWFAC, TAGE, TBASE, TF_GRO, !Input
+     &    TMAX, TMIN, TSGRWT, TURFAC, VegFrac, WLIDOT,    !Input
+     &    WRIDOT,WSIDOT, WSTRES, XSTAGE, XST_TP, YRPLT,   !Input
+     &    YRSOW,HARVFRAC,                                 !Input
      &    EMAT, FLOODN, PLANTS, RTWT,                     !I/O
-     &    AGEFAC, APTNUP, BIOMAS, CANNAA, CANWAA, DYIELD, !Output
-     &    GNUP, GPP, GPSM, GRAINN, GRNWT, GRORT,          !Output
-     &    KUptake, KSTRES, LAI,                           !Output
+     &    AGEFAC, APTNUP, AREAH, AREALF, BIOMAS, CANNAA,  !Output
+     &    CANWAA, CARBO, DYIELD, GNUP, GPP, GPSM, GRAINN, !Output
+     &    GRNWT, GRORT, KUptake, KSTRES, LAI,             !Output
      &    LEAFNO, LFWT, MAXLAI, NSTRES, PANWT, PBIOMS,    !Output
      &    PHINT, PLTPOP, PConc_Root, PConc_Seed,          !Output
      &    PConc_Shel, PConc_Shut, PORMIN, PSTRES1,        !Output
      &    PSTRES2, PUptake, RLWR, ROOTN, RTWTO, RWUEP1,   !Output
-     &    RWUMX, SEEDNI, SEEDRV, SENESCE,                 !Output
-     &    SKERWT, STMWT, STMWTO,                          !Output
+     &    RWUMX, SDWT, SEEDNI, SEEDRV, SENESCE,           !Output
+     &    SLA, SKERWT, STMWT, STMWTO,                     !Output
      &    STOVER, STOVN, TANC, TGROGRN, TILNO, TOTNUP,    !Output
      &    CumNUptake, UNH4, UNO3, WTLF, XGNP)             !Output
 
@@ -407,6 +478,17 @@ C-----------------------------------------------------------------------
      &    SKERWT, STGDOY, STNAME, STOVER, STOVN, SWFAC,   !Input
      &    TILNO, TOTNUP, TURFAC, XGNP, YRPLT,             !Input
      &    BWAH, PODWT, SDWT, SDWTAH, TOPWT, WTNSD)        !Output
+
+      IF (ISWDIS.EQ.'Y') THEN
+        CALL PEST(CONTROL, ISWITCH, 
+     &    AREALF, CLW, CSW, LAGSD, LNGPEG, NR2, CARBO,    !Input
+     &    PHTIM, PLTPOP, RTWTO, SLA, SLDOT, SOILPROP,     !Input
+     &    SSDOT, STMWTO, TOPWT, WLFDOT, WTLF, YRPLT,      !Input
+     &    RLV, SDNO, SHELN, SWIDOT,                       !Input/Output
+     &    VSTAGE, WSHIDT, WTSD, WTSHE,                    !Input/Output
+     &    ASMDOT, DISLA, NPLTD, PPLTD,                    !Output
+     &    SDDES, WLIDOT, WRIDOT, WSIDOT,SDWT)             !Output
+      ENDIF
 
 !***********************************************************************
 !***********************************************************************
