@@ -69,6 +69,12 @@ C=======================================================================
       PARAMETER (LUNSL  = 12)
       PARAMETER (BLANK = ' ')
 
+!WDB 2/17/2020 Following variables added for optimizer
+      LOGICAL FEXIST
+	REAL    OP1,OP2,OP3,OP4,OP5,OP6,OP7,OP8,OP9,OP10   
+      REAL    ETDS,HPD,HPF,PASW,RHRF
+      REAL    ASW
+      Character*255 Pfile
       NLSOIL = 0
 !-----------------------------------------------------------------------
 !     No soil file read - default conditions
@@ -609,6 +615,126 @@ C-KRT*******************************************************************
          CALL LMATCH (NLAYRI, ZLYR, WCR,  NLAYR, DS)
      
       ENDIF
+
+!-----------------------------------------------------------------------      
+!WDB 2/17/2020  Read Optimizer Files and Overwrite Soil Parameters
+!-----------------------------------------------------------------------
+
+         OP1 = -99
+	   OP2 = -99
+	   OP3 = -99
+	   OP4 = -99
+	   OP5 = -99
+	   OP6 = -99
+	   OP7 = -99
+	   OP8 = -99
+	   OP9 = -99
+	   OP10 = -99
+         HPF=1.0
+         HPD = 20
+         RHRF = 0.0
+         PASW = 0.0
+         
+         
+        
+         
+         PATHL = INDEX(PATHSL, BLANK)
+         Pfile = 'Param.dat'
+         IF (PATHL .GT. 1) THEN
+             Pfile = PATHSL(1:(PATHL-1)) // Pfile
+         endif 
+
+         INQUIRE (FILE = Pfile,EXIST = FEXIST)
+	   IF(.NOT.FEXIST) GOTO 557
+         
+         OPEN (88,FILE=Pfile,STATUS='UNKNOWN')
+         READ(88,*) OP1   !SCS curve number
+         READ(88,*) OP2   !drainage rate coefficient (used when ksat not defined)
+         READ(88,*) OP3   !tile conductivity
+         READ(88,*) OP4   !ksat of bottom layer
+         READ(88,*) OP5   !hard pan factor
+         READ(88,*) OP6   !depth to hard pan
+         READ(88,*) OP7   !root hospitality reduction factor
+         READ(88,*) OP8   !SLNF nitrogen mineralization factor
+         READ(88,*) OP9   !SLPF soil fertility factor
+         READ(88,*) OP10  !Percent available soil water
+         CLOSE(88)
+         
+	IF(OP1.GT.-90) THEN
+         CN2 = OP1
+	ENDIF
+
+	IF(OP2.GT.-90) THEN
+        SWCON = OP2
+      ENDIF
+
+!Note: ETDS not used in DSSAT4.7
+      IF(OP3.GT.-90) THEN
+         etds = OP3
+      ENDIF
+           
+	IF(OP4.GT.-90) THEN
+         SWCN(NLAYR) = OP4
+	ENDIF
+
+	IF(OP5.GT.-90) THEN
+         HPF = OP5
+	ENDIF
+
+	IF(OP6.GT.-90) THEN
+         HPD = OP6
+	ENDIF
+
+	IF(OP7.GT.-90) THEN
+         RHRF =OP7
+ 	ENDIF
+
+	IF(OP8.GT.-90) THEN
+         SLNF = OP8
+	ENDIF
+
+	IF(OP9.GT.-90) THEN
+         SLPF = OP9
+	ENDIF
+
+	IF(OP10.GT.-90) THEN
+	PASW = OP10     
+      ENDIF
+
+C      Now, modify parameters using optimum parameter values or default
+c      values from soil.sol
+
+C     Adjust LL(I) to change available water holding capacity
+      IF(PASW.GT.-99) THEN
+        DO I=1,NLAYR
+           ASW = 0.0  
+	     ASW = DUL(I)-LL(I)
+	     ASW=ASW + ASW*PASW/100
+	     LL(I) = DUL(I) - ASW
+	  ENDDO
+      ENDIF
+
+c     Adjust SHF(I) for root shape      
+      IF(RHRF.GT.-99.AND.RHRF.NE.0.0) THEN
+	   Do I = 1,20
+	      IF(DS(I).GT.60.) THEN
+			SHF(I) = RHRF * (DS(I)-60.) + 1.
+			IF(SHF(I).GT.1) SHF(I) = 1.0
+			IF(SHF(I).LT.0) SHF(I) = 0.0
+	  	  ENDIF
+	   END DO
+      ENDIF         
+   
+c     Adjust SHF(I) in hard pan layer
+
+      DO I=1,19
+          IF(DS(I+1).GT.OP6.AND.DS(I).LE.OP6) THEN
+             SHF(I) = OP5
+          ENDIF
+      END DO
+      
+557      CONTINUE
+  
 
       RETURN
 
