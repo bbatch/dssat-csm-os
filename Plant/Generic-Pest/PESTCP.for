@@ -477,8 +477,7 @@ C**WDB 1/2022 Added pest type 5 - target state variable level read in from remot
           ELSEIF (PCTID(I) .EQ. 5) THEN  
              DAM = PL(K) * PDCF1(I,J)
              IF (INDEX (PCPID(I,J),'TLAI') .GT. 0) TLAI = TLAI + DAM
-c                 PRINT *,' TLAI= ',TLAI
-c                 ENDIF
+
               
 !***********************************************************************
             ENDIF     !End of PCTID "IF" construct
