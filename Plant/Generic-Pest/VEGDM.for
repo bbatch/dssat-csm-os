@@ -208,7 +208,7 @@ C     LAIDOT and WLIDOT are subtracted from plant state variables in other routi
 C     Positive values of TLAI in File T increase LAI SO LAIDOT AND WLIDOT must be negative
 C     Negative values of TLAI in File T decrease LAI so LAIDOT and WLIDOT must be positive
 C-----------------------------------------------------------------------     
-        IF (TLAI.NE.0) THEN 
+        IF (TLAI.GE.0) THEN 
             IF(TLAI.GT.0.0.AND.SLA.GT.0.0) THEN
 !              compute current LAI (CURLAI) from SLA and WTLF                
                CURLAI = WTLF*SLA/10000
