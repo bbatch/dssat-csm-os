@@ -64,7 +64,7 @@ C=======================================================================
      &           NFORC,PLTFOR,NDOF,PMTYPE,
      &           LNSIM,LNCU,LNHAR,LNENV,LNTIL,LNCHE,
      &           LNFLD,LNSA,LNIC,LNPLT,LNIR,LNFER,LNRES,
-     &           CONTROL, ISWITCH, UseSimCtr, MODELARG)
+     &           CONTROL, ISWITCH, UseSimCtr, MODELARG,PMWD)
 
       USE ModuleDefs
       USE ModuleData    
@@ -101,6 +101,7 @@ C=======================================================================
       INTEGER TRTNUM, ROTNUM!,FREQ(3),CUHT(3) !NEW FORAGE VARIABLES (DIEGO-2/14/2017)
 
       REAL    FLAG,EXP,TRT,PLTFOR,FREQ,CUHT !NEW FORAGE VARIABLES (DIEGO-2/14/2017)
+      REAL    PMWD
 
       LOGICAL FEXIST, UseSimCtr, SimLevel
 
@@ -567,8 +568,8 @@ C-----------------------------------------------------------------------
       IF (INDEX('FQ',RNMODE) .LE. 0 .OR. RUN == 1) THEN
 
         CALL IPFLD (LUNEXP,FILEX,LNFLD,FLDNAM,WSTA,WSTA1,SLNO,
-     &     SLTX,FLST,SLOPE,DFDRN,FLDD,SFDRN,FLOB,SLDP,
-     &     XCRD,YCRD,ELEV,AREA,SLEN,FLWR,SLAS,FldHist, FHDur)
+     &     SLTX,FLST,SLOPE,DFDRN,FLDD,SFDRN,FLOB,SLDP,PMWD,
+     &     XCRD,YCRD,ELEV,AREA,SLEN,FLWR,SLAS,FldHist, FHDur,PMALB)
 
 C-----------------------------------------------------------------------
 C     Select soil profile input file
@@ -1069,6 +1070,7 @@ C  05/28/1993 PWW Header revision and minor changes
 C  02/21/2006 GH  Update 
 !  07/26/2006 CHP Added previous management code for lookup in 
 !       SOMFR045.SDA file to FIELDS section
+!  05/28/2021 FO  Added code for LAT,LONG and ELEV output in Summary.OUT
 C-----------------------------------------------------------------------
 C  INPUT  : LUNEXP,FILEX,LNFLD
 C
@@ -1086,9 +1088,10 @@ C  HDLAY  :
 C=======================================================================
 
       SUBROUTINE IPFLD (LUNEXP,FILEX,LNFLD,FLDNAM,WSTA,WSTA1,SLNO,
-     &           SLTX,FLST,SLOPE,DFDRN,FLDD,SFDRN,FLOB,SLDP,
-     &           XCRD,YCRD,ELEV,AREA,SLEN,FLWR,SLAS,FldHist, FHDUR)
+     &           SLTX,FLST,SLOPE,DFDRN,FLDD,SFDRN,FLOB,SLDP,PMWD,
+     &           XCRD,YCRD,ELEV,AREA,SLEN,FLWR,SLAS,FldHist,FHDUR,PMALB)
 
+      USE ModuleData
       IMPLICIT NONE
 
       CHARACTER*1  UPCASE
@@ -1096,14 +1099,24 @@ C=======================================================================
       CHARACTER*5  DFDRN,FLST,SLTX, FldHist
       CHARACTER*6  ERRKEY,FINDCH
       CHARACTER*8  FLDNAM
+      CHARACTER*9  CELEV
       CHARACTER*10 SLNO
       CHARACTER*12 FILEX
+      CHARACTER*15 CXCRD, CYCRD
+      CHARACTER*78 MSG(2)
       CHARACTER*92 CHARTEST
+      LOGICAL      CKELEV
+      DATA CKELEV /.TRUE./
 
       INTEGER LUNEXP,LNFLD,LN,LINEXP,ISECT,IFIND,ERRNUM,I, FHDUR
 
-      REAL    FLDD,SFDRN,FLOB,SLDP,SLOPE
+      REAL    FLDD,SFDRN,FLOB,SLDP,SLOPE,PMWD,PMALB
       REAL    XCRD,YCRD,ELEV,AREA,SLEN,FLWR,SLAS
+
+!     Arrays which contain data for printing in SUMMARY.OUT file
+      INTEGER, PARAMETER :: SUMNUM = 3
+      CHARACTER*4, DIMENSION(SUMNUM) :: LABEL
+      REAL, DIMENSION(SUMNUM) :: VALUE
 
       PARAMETER (ERRKEY='IPFLD ')
                  FINDCH='*FIELD'
@@ -1141,7 +1154,8 @@ C=======================================================================
       IF (SFDRN .LE. 0.0) THEN
         SFDRN = 100.
       ENDIF
-
+      Write(msg(1),'("Plastic mulch cover albedo =",F7.2)') PMALB 
+      call info(1,errkey,msg)
 C
 C    New section
 C
@@ -1153,7 +1167,7 @@ C
  70     CALL IGNORE (LUNEXP,LINEXP,ISECT,CHARTEST)
         IF (ISECT .EQ. 1) THEN
            READ (CHARTEST,80,IOSTAT=ERRNUM) LN,
-     &                XCRD,YCRD,ELEV,AREA,SLEN,FLWR,SLAS, FldHist, FHDUR
+     &           CXCRD,CYCRD,CELEV,AREA,SLEN,FLWR,SLAS, FldHist, FHDUR
            IF (ERRNUM .NE. 0) CALL ERROR (ERRKEY,ERRNUM,FILEX,LINEXP)
          ELSE
            CALL ERROR (ERRKEY,2,FILEX,LINEXP)
@@ -1163,9 +1177,102 @@ C
       IF (AREA .LE. 0.0) AREA = 1.0
       IF (FLWR .LE. 0.0) FLWR = 1.0
       IF (SLEN .LE. 0.0) SLEN = SQRT(AREA*FLWR*10000.0)
+      
+C FO - Store Summary.out labels and values in arrays to send to
+C     OPSUM routines for printing.  Integers are temporarily 
+C     saved as real numbers for placement in real array.
 
+      READ(CXCRD,'(F15.0)', IOSTAT=ERRNUM) XCRD
+      IF(ERRNUM .NE. 0) THEN
+         XCRD = -999.0
+         MSG(1) = 'Error reading latitude from experimental file'
+         MSG(2) = FILEX
+         CALL WARNING(2, ERRKEY, MSG)
+      ENDIF
+      READ(CYCRD,'(F15.0)', IOSTAT=ERRNUM) YCRD
+      IF(ERRNUM .NE. 0) THEN
+         YCRD = -99.0
+         MSG(1) = 'Error reading longitude from experimental file'
+         MSG(2) = FILEX
+         CALL WARNING(2, ERRKEY, MSG)
+      ENDIF
+      READ(CELEV,'(F9.0)', IOSTAT=ERRNUM)  ELEV
+      IF(ERRNUM .NE. 0) THEN
+        ELEV = -99.0
+        MSG(1) = 'Error reading elevation from experimental file'
+        MSG(2) = FILEX
+        CALL WARNING(2, ERRKEY, MSG)
+      ENDIF
+      
+      IF(YCRD .GE. -90.0 .AND. YCRD .LE. 90.0 .AND.
+     &   XCRD .GE.-180.0 .AND. XCRD .LE. 180.0 .AND.
+     &   LEN_TRIM(CYCRD).GT. 0.0 .AND. LEN_TRIM(CXCRD).GT.0.0
+     &   .AND.
+     &   (ABS(YCRD) .GT. 1.E-15 .OR. ABS(XCRD) .GT. 1.E-15))THEN
+!     Transfer data to the modules
+         CALL PUT('FIELD','CYCRD',CYCRD)
+         CALL PUT('FIELD','CXCRD',CXCRD)   
+         LABEL(1) = 'YCRD'; VALUE(1) = YCRD 
+         LABEL(2) = 'XCRD'; VALUE(2) = XCRD
+         CKELEV = .TRUE.
+      ELSE
+        !     Transfer data to the modules
+        CALL PUT('FIELD','CYCRD','            -99')
+        CALL PUT('FIELD','CXCRD','            -99')
+        LABEL(1) = 'YCRD'; VALUE(1) = -99.0 
+        LABEL(2) = 'XCRD'; VALUE(2) = -999.0         
+        CKELEV = .FALSE.
+      ENDIF
+  
+!     Check elevation (CKELEV) based on latitude and longitude  
+      IF(CKELEV .EQV. .TRUE.) THEN
+         IF(ELEV .GT. -99.0 .AND. LEN_TRIM(CELEV) .GT. 0.0) THEN
+           CALL PUT('FIELD','CELEV',CELEV)
+           LABEL(3) = 'ELEV'; VALUE(3) = ELEV      
+         ELSE
+           CALL PUT('FIELD','CELEV','      -99')
+           LABEL(3) = 'ELEV'; VALUE(3) = -99.0
+           
+         ENDIF
+      ELSE
+        IF(ELEV .GT. -99.0 .AND. LEN_TRIM(CELEV) .GT. 0.0 .AND.
+     &     ABS(ELEV) .GT. 1.E-15) THEN
+          CALL PUT('FIELD','CELEV',CELEV)
+          LABEL(3) = 'ELEV'; VALUE(3) = ELEV      
+        ELSE
+          CALL PUT('FIELD','CELEV','      -99')
+          LABEL(3) = 'ELEV'; VALUE(3) = -99.0
+        ENDIF
+      ENDIF
+               
+C     Send labels and values to OPSUM      
+      CALL SUMVALS (SUMNUM, LABEL, VALUE)    
 C
 C    End New section
+
+C
+C    New section (3rd)
+C
+C    Find header and read second line of field information
+C
+      HFNDCH='PMALB'
+      CALL HFIND(LUNEXP,HFNDCH,LINEXP,IFIND)
+      IF (IFIND .EQ. 1) THEN
+ 71     CALL IGNORE (LUNEXP,LINEXP,ISECT,CHARTEST)
+        IF (ISECT .EQ. 1) THEN
+           READ (CHARTEST,90,IOSTAT=ERRNUM) LN,
+     &                PMWD,PMALB
+           IF (ERRNUM .NE. 0) CALL ERROR (ERRKEY,ERRNUM,FILEX,LINEXP)
+         ELSE
+           CALL ERROR (ERRKEY,2,FILEX,LINEXP)
+         ENDIF
+         IF (LN .NE. LNFLD) GO TO 71
+      ENDIF
+      IF (PMWD .LE. 0.0) PMWD = -99
+      IF (PMALB .LE. 0.0) PMALB = -99
+
+C
+C    End New section (3rd)
 
       REWIND(LUNEXP)
 
@@ -1179,7 +1286,8 @@ C-----------------------------------------------------------------------
      &         2(1X,A5),1X,F5.0,1X,A10)
 !     chp 7/26/2006
 ! 80   FORMAT (I3,2(F15.0,1X),F9.0,1X,F17.0,3(1X,F5.0))
- 80   FORMAT (I3,2(F15.0,1X),F9.0,1X,F17.0,3(1X,F5.0),1X,A5,I6)
+ 80   FORMAT (I3,2(A15,1X),A9,1X,F17.0,3(1X,F5.0),1X,A5,I6)
+ 90   FORMAT (I3, F6.0, F6.2)
 
       END SUBROUTINE IPFLD
 

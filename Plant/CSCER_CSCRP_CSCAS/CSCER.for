@@ -1385,6 +1385,10 @@
       REAL          VWAD          ! Vegetative canopy weight       kg/ha
       REAL          VRNSTAGE      ! Vernalization stage            #
 
+!!     2021-02-14 chp
+!      REAL          Nuptake_daily !Daily N uptake (kg [N]/ha)
+!      REAL          NUAD_Y        !Yesterday's cumulative N uptake
+
       PARAMETER     (BLANK = ' ')
       PARAMETER     (RUNINIT = 1)
       PARAMETER     (SEASINIT = 2)
@@ -1472,9 +1476,9 @@
 
         IF (DYNAMIC.EQ.RUNINIT) THEN
 
-          MODNAME = 'CSCER047'
+          MODNAME = 'CSCER048'
           VERSION = 010115
-          GENFLCHK(3:15) = 'CER047.08102017'
+          GENFLCHK(3:15) = 'CER048.20200721'
 
           ! Parameters
           STDAY = 20.0    ! TT in standard day
@@ -3671,7 +3675,8 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
 
           ! Mean temperature
           TMEAN = (TMAX+TMIN)/2.0
-          IF (snow.GT.0) THEN
+C-GH      IF (snow.GT.0) THEN
+          IF (snow .GT. 0.0) THEN
             tmeans = 0.0
           ELSE
             tmeans = tmean
@@ -6245,7 +6250,8 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
      &        ' VRNFD DYLFD')
      
               WRITE (NOUTPN,2251)
- 2251         FORMAT ('@YEAR DOY   DAS   DAP TMEAN  GSTD  NUAD',
+!             2021-02-15 chp Change NUAD to NUAC in header.
+ 2251         FORMAT ('@YEAR DOY   DAS   DAP TMEAN  GSTD  NUAC',
      &        '  TNAD SDNAD  RNAD  CNAD  LNAD  SNAD  HNAD  HIND',
      &        ' RSNAD SNNPD SNN0D SNN1D',
      B        '  RN%D  LN%D  SN%D  HN%D SDN%D  VN%D',
@@ -6470,6 +6476,11 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
          CALL LinklstPlGrf(vCsvlinePlGrf)
       END IF
  
+!!             2021-02-14 chp 
+!!             NUAD should be a daily variable, but here it's cumulative. 
+!!             Introduce a new variable that is daily.
+!              Nuptake_daily = NUAD - NUAD_Y
+
               ! Plant N outputs
               IF (ISWNIT.EQ.'Y') THEN
                 CALL Csopline(senn0c,sennal(0))
@@ -6486,6 +6497,8 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
      &           F6.1,F6.2,
      &           2F6.2)')
      &           YEAR,DOY,DAS,DAP,TMEAN,ZSTAGE,NUAD,
+!    &           YEAR,DOY,DAS,DAP,TMEAN,ZSTAGE,
+!    &           Nuptake_daily,
      &           TNAD,SDNAD,
      &           RNAD,
      &           CNAD,LLNAD,SNAD,
@@ -6508,6 +6521,11 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
       END IF 
 
               ENDIF  ! ISWNIT = Y
+
+!!             2021-02-14 chp 
+!!             Keep cumulative value for use tomorrow.
+!              NUAD_Y = NUAD
+
             ENDIF    ! IDETG.NE.'N'
             ENDIF    ! IDETG.NE.'N'.OR.IDETL.EQ.'0'
           ENDIF      ! MOD(FROPADJ)
@@ -6666,7 +6684,8 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
      &       '  Grain weight mg   ',GRWT/GRNUM*1000.0
             WRITE (fnumwrk,'(A20,F6.1)')
      &       '  Grain weight coeff',g2kwt
-            IF (GRNUM.GT.0.0.AND.G2KWT-GRWT/GRNUM*1000.0.GT.0.1) THEN
+! FO/GH - 11-13-2021 - Removed division by zero issue for GRNUM
+            IF (GRNUM.GT.0.0) THEN
               WRITE (fnumwrk,'(A34)')
      &         '  Some limitation on grain growth!'
               WRITE(fnumwrk,'(A22,I4)')'   Days of Ch2o limit ',ch2olim
@@ -7774,6 +7793,7 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
             IF (IDETO.NE.'N'.OR.IDETL.EQ.'A') THEN
             
               ! PLANT EVALUATION (MEASURED - SIMULATED COMPARISONS)
+C  FO - 07/16/2021 Added more characters for H#AMS and H#GMS because of GLUE error.
               
               WRITE (fnumwrk,*) 'Writing EVALUATION'
               
@@ -7789,14 +7809,14 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
                EVHEADNM = 0
               ENDIF
               
-              IF (EVHEADNM.LT.7) THEN
+              IF (EVHEADNM.EQ.0) THEN
                 IF (EXCODE.NE.EXCODEP.AND.EVALOUT.GT.1 .OR.
      &              RUN.EQ.1.AND.RUNI.EQ.1) THEN
                  EVHEADNM = EVHEADNM + 1
                  OPEN (UNIT = FNUMTMP,FILE = FNAMETMP,
      &            POSITION = 'APPEND')
                  WRITE (FNUMTMP,*) ' '
-                 IF (EVHEADNM.LT.7) THEN
+                 IF (EVHEADNM.EQ.1) THEN
                    WRITE (FNUMTMP,993) EVHEADER,EXCODE,
      &              ENAME(1:25),MODNAME
   993              FORMAT (A14,A10,'  ',A25,2X,A8,/)
@@ -7817,8 +7837,8 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
      x            ' MDAPS MDAPM',
      x            ' HWAMS HWAMM',
      x            ' HWUMS HWUMM',
-     x            ' H#AMS H#AMM',
-     x            ' H#GMS H#GMM',
+     x            '    H#AMS H#AMM',
+     x            '    H#GMS H#GMM',
      x            ' LAIXS LAIXM',
      x            ' L#SMS L#SMM',
      x            ' T#AMS T#AMM',
@@ -7882,8 +7902,8 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
      x        I6,I6,
      x        I6,I6,
      x        A6,A6,
-     x        I6,I6,
-     x        F6.1,F6.1,
+     x        1X,I8,I6,
+     x        1X,F8.1,F6.1,
      x        F6.1,F6.1,
      x        F6.1,F6.1,
      x        I6,I6,
@@ -7930,7 +7950,9 @@ C  FO - 05/07/2020 Add new Y4K subroutine call to convert YRDOY
               WRITE (fnumwrk,*) 'Writing OVERVIEW'
               
               FNAMETMP = ' '
-              FNAMETMP(1:12) = 'Overview.'//out
+              ! TF - Updated OVERVIEW.OUT name to avoid issues
+              ! with case sensitive systems (07/27/2021) 
+              FNAMETMP(1:12) = 'OVERVIEW.'//out
               
               IF (FILEIOT(1:2).EQ.'DS') THEN
                 IF (RUN.EQ.1 .AND. RUNI.EQ.1) THEN

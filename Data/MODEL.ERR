@@ -160,6 +160,9 @@ Error in forage harvest. Mow input date is defined prior to the start of simulat
 GETDSC   29
 Detail.CDE file not found.  Program will stop.
 
+FIRRIG    1
+Invalid combination of flooded field parameters. 
+
 IDWTH     1
 Error in Weather Sensitivity Selection entry.  Fix entry or batch file.
 
@@ -170,7 +173,7 @@ INPUT     1
 Error in Selection entry.  Fix entry or batch file.
 
 INPUT     2
-Planting Date is Before Start of Simulation.  Please Fix Input File.
+Planting date is defined prior to the start of simulation.
 
 INPUTX    0
 Input module failed.  Program execution halted.
@@ -196,11 +199,11 @@ Error in Ecotype entry.  Fix entry or batch file.
 IPECO     2
 Error in Ecotype entry.  Fix ecotype input file.
 
-IPECO     2
-Error in Ecotype entry.  Fix ecotype input file.
-
 IPECO     3
 DEFAULT Ecotype not found. Fix ecotype input file.
+
+IPECO     4
+Missing ecotype coefficients. Fix ecotype input file.
 
 IPECO    21
 Ecotype input section not found.  Please correct file.
@@ -286,6 +289,15 @@ Field input section not found.  Please add to input file.
 IPFLD     2
 Field input level not found. Please correct input file.
 
+IPFLD     3
+Latitude input has wrong format. Please correct input file.
+
+IPFLD     4
+Longitude input has wrong format. Please correct input file.
+
+IPFLD     5
+Elevation input has wrong format. Please correct input file.
+
 IPFLD    10
 Error in weather station input.  Correct input file.
 
@@ -308,7 +320,7 @@ IPHAR     5
 Reported harvest date after planting not found.  Please add to input file.
 
 IPHAR    6
-Harvest input date is defined prior to the start of simulation.
+Harvest date is defined prior to the start of simulation.
 
 IPHAR    10
 Error in date of harvest input.  Correct input file.
@@ -362,7 +374,7 @@ IPPLNT    2
 Error in planting inputs.  Check format.
 
 IPPLNT   10
-Error in planting date input.  Check format.
+Planting date is before start of simulation.  Please fix input file.
 
 IPPLNT   11
 Error in plant population input.  Check format.
@@ -454,6 +466,9 @@ Automatic planting date is defined prior to the start of simulation.
 IPSIM    10
 Automatic harvest date is defined prior to the start of simulation.
 
+IPSIM    11
+Harvest at maturity option not available for this crop.  Correct input file.
+
 SIMCTR    1
 Error in start simulation date input.  Check format.
 
@@ -482,7 +497,7 @@ IPSLIN    2
 Initial soil conditions input level not found. Please correct input file.
 
 IPSLIN    3
-Initial conditions date is lower than start simulation date.
+Initial conditions date is defined prior to the start of simulation.
 
 IPSLIN   10
 Error in initial soil water inputs.  Please check data.
@@ -557,7 +572,7 @@ IPTILL    2
 Tillage input level not found. Please correct input file.
 
 IPTILL    3
-First tillage application date is defined prior to the start of simulation.
+First tillage application date is defined prior to the start of simulation date.
 
 IPVAR     1
 Error in Cultivar entry.  Fix entry or batch file.
@@ -640,11 +655,14 @@ File not found.  Please check file name or create file.
 IPWTH    30
 Error opening file.
 
+IPASCE    1
+Error reading species parameters for evapotranspiration.
+
 IRRIG    10
 Incompatibility between Century SOM method and flooded field management.
 
 LAND      2
-Planting date is before start of simulation date.  Please fix input file.
+Planting date is defined prior to the start of simulation date.
 
 MODELN    1
 Error opening file. Please check file.
@@ -733,17 +751,20 @@ Error in Weather Sensitivity Analysis Selection entry. Fix entry or batch file.
 SENS      1
 Error in Sensitivity Selection entry.  Fix entry or batch file.
 
+SHADOW    1
+Error in Fraction shaded for sun and row geometry using ellipses.
+
 ENTFER    1
-Error in fertilizer data entry is defined prior to the start of simulation.
+First fertilizer application date is defined prior to the start of simulation.
 
 ENTIRR    1
-Error in interactive irrigation data entry is defined prior to the start of simulation.
+First irrigation application date is defined prior to the start of simulation.
 
 ENTRES    1
-Error in residue data entry is defined prior to the start of simulation.
+First residue application date is defined prior to the start of simulation.
 
 SOILDY   10
-Organic carbon in soil file is zero or undefined.  Please check file.
+Organic carbon in soil file is zero or undefined. Please check file.
 
 SOILDY   11
 Missing data in soil file.  Please check file.
@@ -929,3 +950,6 @@ Start simulation date is lower than first weather date.
 
 Y4KDOY    1
 Input date is greather than 99 years after start simulation date.
+
+FORCST    1
+Forecast date is before start of simulation date.
