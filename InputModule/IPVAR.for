@@ -25,6 +25,7 @@ C  08/09/2012 GH  Updated for cassava
 !  04/16/2013 CHP/KAD Added SALUS model
 !  05/09/2013 CHP/FR/JZW Added N-wheat module
 !  01/21/2020 JG moved some CUL parameters to ECO file
+!  10/20/2020 FV added SUOIL (OilcropSun)
 C-----------------------------------------------------------------------
 C  INPUT  : FILEG,NSENS,VARNO,VARTY,VRNAME,PATHGE,ECONO
 C
@@ -211,7 +212,7 @@ C-LPM  Add CIAT cassava model
 !     CASSAVA: cassava **
       CASE ('CSYCA')
           READ (C360,821,IOSTAT=ERRNUM) VARTY,VRNAME,ECONO, 
-     &      B01ND, B12ND, B23ND, BR1FX, BR2FX, BR3FX, BR4FX, 
+     &      B01ND, B12ND, B23ND, B34ND, BR1FX, BR2FX, BR3FX, BR4FX, 
      &      LAXS, SLASS, LLIFA, LPEFR, LNSLP, NODWT, NODLT 
 
 !     Ceres-wheat: wheat, barley **
@@ -298,6 +299,12 @@ C-GH &            P1,P2O,P2R,P5,G1,G2,PHINT,P3,P4
           CALL ERROR(ERRKEY,ERRNUM,FILEGG,LINVAR)
         ENDIF
 
+!     Ceres Teff **
+      CASE ('TFCER')
+        READ (C360,800,IOSTAT=ERRNUM) VARTY,VRNAME,ECONO,
+!    &            P1,P2R,P5,P2O,G1,G2,G3,G4, PHINT, G5
+     &            P1,P2R,P5,P2O,G1,G2,G3,PHINT, THOT, TCLDP, TCLDF
+
 !        READ (C360,'(90X,F6.0)',IOSTAT=ERRNUM) G5
 !!       For backwards compatibility for cultivar files with no G5.
 !        IF (ERRNUM /= 0 .OR. ABS(G5-1.0) .LT. 1.E-3) THEN
@@ -373,6 +380,11 @@ C-GH &            P1,P2O,P2R,P5,G1,G2,PHINT,P3,P4
      &      mid_tt_lf_growth         ,
      &      end_tt_lf_growth         
 
+!!     Sunflower **
+       CASE ('SUOIL')
+         READ (C360,800,IOSTAT=ERRNUM) VARTY,VRNAME,ECONO,
+     &           P1,P2,P5,G2,G3,O1
+     
 !     Taro, tanier **
       CASE ('TRARO','TNARO')
         READ (C360,800,IOSTAT=ERRNUM) VARTY,VRNAME,ECONO,
@@ -386,7 +398,7 @@ C-GH &            P1,P2O,P2R,P5,G1,G2,PHINT,P3,P4
 !     Pineapple **
       CASE ('PIALO')
         READ (C360,800,IOSTAT=ERRNUM) VARTY,VRNAME,ECONO,
-     &           P1,P2,P3,P4,P5,P6,G2,G3,PHINT
+     &           TC,P1,P2,P3,P4,P5,P6,P7,P8,G1,G2,G3,PHINT
       END SELECT
 
       IF (ERRNUM .NE. 0) CALL ERROR (ERRKEY,ERRNUM,FILEG,LINVAR)
@@ -432,10 +444,9 @@ C-----------------------------------------------------------------------
   510 FORMAT (6X,'ERROR! Variety Selection must be an INTEGER value',/)
 
   800 FORMAT (A6,1X,A16,7X,A6,21F6.0)      !11/8/07
-
   810 FORMAT (A6,1X,A16,7X,A6,20F6.0,A)    !WHCRP, BACRP 03/16/2010
   820 FORMAT (A6,1X,A16,7X,A6,21F6.0,A)    !CSCAS        02/18/2014
-  821 FORMAT (A6,1X,A16,7X,A6,14F6.0)      !CSYCA        07/15/2019 
+  821 FORMAT (A6,1X,A16,7X,A6,15F6.0)      !CSYCA        09/09/2020 
   830 FORMAT (A6,1X,A16,7X,A6,7F6.0,A)     !WHCER, BACER 03/16/2010
   850 FORMAT (A6,1X,A16,7X,A6,9F6.0,A)     !JG moved parameters to ECO, 01/09/2020
  1055 FORMAT (A6,1X,A16,7X,A6,44F6.0)      ! 02/10/2009 

@@ -610,7 +610,7 @@ C=======================================================================
 !     GENOTYPE
 !-----------------------------------------------------------------------
 !     Write genetic coefficients
-      WRITE (HEADER(I),800) CROPD(1:10),VARTY,VRNAME,ECONO; I=I+1
+      WRITE (HEADER(I),800) CROPD(1:16),VARTY,VRNAME,ECONO; I=I+1
 
       SELECT CASE (MODEL(1:5))
 
@@ -618,13 +618,13 @@ C=======================================================================
 !     CROPGRO
       CASE ('CRGRO','PRFRM')
 !      IF (INDEX (MODEL, 'CRGRO') > 0) THEN
-        IF (INDEX ('BN,CH,CP,FB,GB,LT,PE,PN,PP,SB,VB',CROP) 
+        IF (INDEX ('BN,CH,CP,FB,GB,LT,PE,PN,PP,SB,VB,BG',CROP) 
      &    > 0) THEN
            WRITE (HEADER(I), 850) CSDVAR,PPSEN,PH2T5,
      &                        PHTHRS(8),PHTHRS(10); I=I+1
            WRITE (HEADER(I),851) WTPSD,SDPDVR,SFDUR,PODUR,XFRUIT; I=I+1
 
-        ELSEIF (INDEX ('BH,BM,BR,CB,CN,CO,NP,PR,QU,SF,SU,TM',CROP)
+        ELSEIF (INDEX ('BH,BM,BR,CB,CI,CN,CO,NP,PR,QU,SF,SU,TM',CROP)
      &          .GT. 0) THEN
            WRITE (HEADER(I), 850) CSDVAR,PPSEN,PH2T5,
      &                        PHTHRS(8),PHTHRS(10); I=I+1
@@ -741,10 +741,10 @@ c          WRITE (HEADER(I),'(2F6.0,F6.2)') PHINT, LLIFA, STFR
 !     Cassava CIAT      
       CASE ('CSYCA')
           WRITE (HEADER(I),'(A,A)')
-     &     "  B01ND B12ND B23ND BR1FX BR2FX BR3FX BR4FX "
+     &     "  B01ND B12ND B23ND B34ND BR1FX BR2FX BR3FX BR4FX "
           I=I+1
-          WRITE (HEADER(I),'(3F6.0,4F6.2)') 
-     &     B01ND, B12ND, B23ND, BR1FX, BR2FX, BR3FX, BR4FX
+          WRITE (HEADER(I),'(4F6.0,4F6.2)') 
+     &     B01ND, B12ND, B23ND, B34ND, BR1FX, BR2FX, BR3FX, BR4FX
          I=I+1
          WRITE (HEADER(I),'(A,A)') 
      &     "  LAXS  SLAS",
@@ -779,6 +779,12 @@ c          WRITE (HEADER(I),'(2F6.0,F6.2)') PHINT, LLIFA, STFR
              WRITE (HEADER(I),915) P1,P2,P5,AX; I=I+1
              WRITE (HEADER(I),916) G2,G3,PHINT,LX; I=I+1
              
+!-----------------------------------------------------------------------
+!     CERES-Sugarbeet
+      CASE ('BSCER')
+            WRITE (HEADER(I),900) P1,P2,P5; I=I+1
+            WRITE (HEADER(I),901) G2,G3,PHINT; I=I+1
+
 !-----------------------------------------------------------------------
 !     Sorghum
       CASE ('SGCER')
@@ -820,13 +826,15 @@ c          WRITE (HEADER(I),'(2F6.0,F6.2)') PHINT, LLIFA, STFR
 !-----------------------------------------------------------------------
 !     Pineapple **
       CASE ('PIALO')
-         WRITE (HEADER(I),2010) P1,P2,P3,P4,P5,P6; I=I+1
-         WRITE (HEADER(I),2011) G2,G3,PHINT; I=I+1
- 2010 FORMAT (1X,'    P1:',F6.1,'    P2:',F6.1,
-     &           '    P3:',F6.1,'    P4:',F6.0,
-     &           '    P5:',F6.1,'    P6:',F6.1)
- 2011 FORMAT (1X,'    G2:',F6.1,'    G3:',F6.2,
-     &           ' PHINT:',F6.1)
+         WRITE (HEADER(I),2010) TC,P1,P2,P3,P4,P5,P6,P7,P8; I=I+1
+         WRITE (HEADER(I),2011) G1,G2,G3,PHINT; I=I+1
+ 2010    FORMAT (1X,'    TC:',F6.1,'    P1:',F6.1,
+     &           '    P2:',F6.1,'    P3:',F6.1,
+     &           '    P4:',F6.1,'    P5:',F6.1
+     &           '    P6:',F6.1,'    P7:',F6.1,
+     &           '    P8:',F6.1)
+ 2011 FORMAT (1X,'    G1:',F6.1,'    G2:',F6.1,
+     &           '    G3:',F6.1,' PHINT:',F6.1)
 
 !-----------------------------------------------------------------------
 !     Sugarcane - Canegro
@@ -889,7 +897,7 @@ C-----------------------------------------------------------------------
   711 FORMAT ('RUNOFF CURVE # :',F5.2,
      &        6X,'DRAINAGE RATE     :',F5.2,9X,'FERT. FACTOR :',F5.2)
 
-  800 FORMAT (1X,A10,1X,'CULTIVAR :',A6,'-',A16,3X,'ECOTYPE :',
+  800 FORMAT (1X,A16,1X,'CULTIVAR: ',A6,'-',A16,3X,'ECOTYPE: ',
      &        A6)
   850 FORMAT (1X,'CSDVAR :',F5.2,'  PPSEN  :',F5.2,
      &         '  EMG-FLW:',F5.2,'  FLW-FSD:',F5.2,'  FSD-PHM :',F6.2)

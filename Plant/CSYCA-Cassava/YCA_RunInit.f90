@@ -34,7 +34,7 @@
         IF (RUNCRP <= 0) THEN
             MODNAME(1:8) = 'CSYCA' // ModelVerTxt 
             VERSIONCSCAS = 010114                                                             ! MF 15SE14 Changed from VERSION, conflict with ModuleDefs 
-            GENFLCHK(1:15) = 'CSYCA047.20200730'
+            GENFLCHK(1:15) = 'CSYCA048.041621'
             
             !-----------------------------------------------------------------------
             !         Set parameters (Most should be placed in input files!)
@@ -180,21 +180,25 @@
                 OUTPG = 'PlantGro.'//OUT
                 OUTPN = 'PlantN.'//OUT
                 OUTPG2 = EXCODE(1:8)//'.OP2'
+                OUTPG3 = 'FreshWt.'//OUT
                 OUTPGF = EXCODE(1:8)//'.OPF'
             ELSE  
                 OUTPG = 'PlantGro.'//OUT
                 OUTPN = 'PlantN.'//OUT
                 OUTPG2 = 'PlantGr2.'//OUT
+                OUTPG3 = 'FreshWt.'//OUT
                 OUTPGF = 'PlantGrf.'//OUT 
             ENDIF
             CALL GETLUN (OUTPG,NOUTPG)
             CALL GETLUN (OUTPG2,NOUTPG2)
+            CALL GETLUN (OUTPG3,NOUTPF)
             CALL GETLUN (OUTPGF,NOUTPGF)
             CALL GETLUN (OUTPN,NOUTPN)
             
             ! IDETO FILES
             ! NB. Renaming of Overview and Evaluate handled by CSM
-            FNAMEOV = 'Overview.'//out
+            !LPM 30JUL2021 Change to uppercase the overview.out file
+            FNAMEOV = 'OVERVIEW.'//out
             FNAMEEVAL = 'Evaluate.'//out
             FNAMEMEAS = 'Measured.'//out
             CALL GETLUN (FNAMEEVAL,fnumeval)
@@ -253,6 +257,9 @@
                 OPEN (UNIT = NOUTPG2, FILE = OUTPG2)
                 WRITE (NOUTPG2,'(A38)')'$GROWTH ASPECTS SECONDARY OUTPUTS FILE'
                 CLOSE (NOUTPG2)
+                OPEN (UNIT = NOUTPF, FILE = OUTPG3)
+                WRITE(NOUTPF,'("*Fresh Weight Output File")')
+                CLOSE (NOUTPF)
                 OPEN (UNIT = NOUTPGF, FILE = OUTPGF)
                 WRITE (NOUTPGF,'(A27)')'$GROWTH FACTOR OUTPUTS FILE'
                 CLOSE (NOUTPGF)
