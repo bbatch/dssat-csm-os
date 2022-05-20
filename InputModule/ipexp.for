@@ -1179,7 +1179,7 @@ C     saved as real numbers for placement in real array.
 
       READ(CXCRD,'(F15.0)') XCRD 
       READ(CYCRD,'(F15.0)') YCRD
-      READ(CELEV,'(F9.0)')   ELEV
+      READ(CELEV,'(F9.0)')   ELEV 
       
       IF(YCRD .GE. -90.0 .AND. YCRD .LE. 90.0 .AND.
      &   XCRD .GE.-180.0 .AND. XCRD .LE. 180.0 .AND.

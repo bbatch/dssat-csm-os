@@ -62,13 +62,33 @@ C=======================================================================
       CHARACTER*15  HEADER(MAXCOL)
 !     COL keeps beginning and ending column for each header
       INTEGER COL(MAXCOL,2), C1, C2, COUNT, L
+      
+!WDB 2/16/2022 Following variables added for optimizer
+      LOGICAL FEXIST
+	REAL    OP1,OP2,OP3,OP4,OP5,OP6,OP7,OP8,OP9,OP10   
+C      REAL    HPF
+      REAL    ASW
+      INTEGER PP, PPP
+!WDB End Changes 2/16/2022    
+      
+      
+C** WDB 3/25/22 Variables added for soil optimizer
+!       REAL HPFA
+!       REAL HPD
+!       REAL ETDS
+!       REAL RHRF
+!       REAL KSAT
+!       REAL PASW
+       
+C** WDB end changes
 
       TYPE (SwitchType) ISWITCH
 
       PARAMETER (ERRKEY = 'IPSOIL')
       PARAMETER (LUNSL  = 12)
       PARAMETER (BLANK = ' ')
-
+      
+     
       NLSOIL = 0
 !-----------------------------------------------------------------------
 !     No soil file read - default conditions
@@ -231,6 +251,24 @@ C
 !     Output with 2nd tier soil data to INP file.
       SASC   = -99.
 
+!WDB 4/6/22 
+      HPF = -99
+      HPD = -99
+      RHRF = -99
+      ETDR = -99
+      KSAT = -99
+      PASW = -99
+      OP1 = -99
+	OP2 = -99
+	OP3 = -99
+	OP4 = -99
+	OP5 = -99
+	OP6 = -99
+	OP7 = -99
+	OP8 = -99
+	OP9 = -99
+	OP10 = -99      
+!WDB      
 !-----------------------------------------------------------------------
 !     Find correct soil within soil file
          I = 0
@@ -342,6 +380,8 @@ C-KRT*******************************************************************
                DO I = 1, COUNT
                  C1 = COL(I,1)
                  C2 = COL(I,2)
+                 PP = C1-1
+                 PPP=C2+1
                  SELECT CASE (TRIM(HEADER(I)))
 
                  CASE('SCOM'); READ(C255(C1:C2),*,IOSTAT=ERR) SCOM
@@ -355,6 +395,15 @@ C-KRT*******************************************************************
                  CASE('SMPX'); READ(C255(C1:C2),*,IOSTAT=ERR) SMPX
                  CASE('SMKE'); READ(C255(C1:C2),*,IOSTAT=ERR) SMKE
                  CASE('SGRP'); READ(C255(C1:C2),*,IOSTAT=ERR) SGRP
+c**WDB Added GeoSim optimizer parameters 3/25/2022
+
+                 CASE('HPFA'); READ(C255(PP:C2),*,IOSTAT=ERR) HPF   
+                 CASE('HPDP'); READ(C255(PP:C2),*,IOSTAT=ERR) HPD
+                 CASE('RHRF'); READ(C255(PP:PPP),*,IOSTAT=ERR) RHRF
+                 CASE('ETDS'); READ(C255(PP:C2),*,IOSTAT=ERR) ETDR
+                 CASE('KSAT'); READ(C255(PP:C2),*,IOSTAT=ERR) KSAT
+                 CASE('PASW'); READ(C255(PP:C2),*,IOSTAT=ERR) PASW                                         
+C** WDB End Changes
 
 !                 CASE('SOILLAT'); READ(C255(C1:C2),*,IOSTAT=ERR) SLAT
 !                 CASE('SOILLONG');READ(C255(C1:C2),*,IOSTAT=ERR) SLONG
@@ -368,6 +417,7 @@ C-KRT*******************************************************************
 !                 CASE('ETDR');    READ(C255(C1:C2),*,IOSTAT=ERR) ETDR
 
                  END SELECT
+                               
                  IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILES,LINSOL)
                ENDDO
 
@@ -469,7 +519,8 @@ C-KRT*******************************************************************
          CLOSE (LUNSL)
 
 !        Check validity of soil values 
-	   IF (SWCON .LT. 0.0) CALL ERROR (ERRKEY,10,FILES,LINSOL)
+
+         IF (SWCON .LT. 0.0) CALL ERROR (ERRKEY,10,FILES,LINSOL)
 	   IF (CN2 .LE. 0.0)   CALL ERROR (ERRKEY,11,FILES,LINSOL)
          IF (SALB .LE. 0.0) THEN
 !           SALB = 0.13
@@ -609,6 +660,117 @@ C-KRT*******************************************************************
          CALL LMATCH (NLAYRI, ZLYR, WCR,  NLAYR, DS)
      
       ENDIF
+
+  
+
+       
+
+
+!-----------------------------------------------------------------------      
+!WDB 2/16/2022  Read Optimizer Files and Overwrite Soil Parameters
+!-----------------------------------------------------------------------
+
+         INQUIRE (FILE = 'PARAM.DAT',EXIST = FEXIST)
+	   IF(.NOT.FEXIST) GOTO 557
+        
+         OPEN (88,FILE='PARAM.DAT',STATUS='UNKNOWN')
+         READ(88,*) OP1   !SCS curve number
+         READ(88,*) OP2   !drainage rate coefficient (used when ksat not defined)
+         READ(88,*) OP3   !tile conductivity
+         READ(88,*) OP4   !ksat of bottom layer
+         READ(88,*) OP5   !hard pan factor
+         READ(88,*) OP6   !depth to hard pan
+         READ(88,*) OP7   !root hospitality reduction factor
+         READ(88,*) OP8   !SLNF nitrogen mineralization factor
+         READ(88,*) OP9   !SLPF soil fertility factor
+         READ(88,*) OP10  !Percent available soil water
+         CLOSE(88)
+         
+	IF(OP1.GT.-90) THEN
+         CN2 = OP1
+	ENDIF
+
+	IF(OP2.GT.-90) THEN
+        SWCON = OP2
+      ENDIF
+
+!Note: ETDS not used in DSSAT4.8
+      IF(OP3.GT.-90) THEN
+          ETDR = OP3       
+      ENDIF
+           
+	IF(OP4.GT.-90) THEN
+         SWCN(NLAYR) = OP4
+	ENDIF
+
+	IF(OP5.GT.-90) THEN
+         HPF = OP5
+	ENDIF
+
+	IF(OP6.GT.-90) THEN
+         HPD = OP6
+	ENDIF
+
+	IF(OP7.GT.-90) THEN
+         RHRF =OP7
+ 	ENDIF
+
+	IF(OP8.GT.-90) THEN
+         SLNF = OP8
+	ENDIF
+
+	IF(OP9.GT.-90) THEN
+         SLPF = OP9
+	ENDIF
+
+	IF(OP10.GT.-90) THEN
+	PASW = OP10     
+      ENDIF
+
+C      Now, modify parameters using optimum parameter values from param.dat or
+c      values from new entries in soil.sol
+
+C     Adjust LL(I) to change available water holding capacity
+      IF(PASW.GT.-90) THEN
+        DO I=1,NLAYR
+           ASW = 0.0  
+	     ASW = DUL(I)-LL(I)
+	     ASW=ASW + ASW*PASW/100
+	     LL(I) = DUL(I) - ASW
+	  ENDDO
+      ENDIF
+
+c     Adjust SHF(I) for root shape      
+      IF(RHRF.GT.-90.AND.RHRF.NE.0.0) THEN
+	   Do I = 1,NLAYR
+	      IF(DS(I).GT.60.) THEN
+			SHF(I) = RHRF * (DS(I)-60.) + 1.
+			IF (SHF(I).GT.1) SHF(I) = 1.0
+			IF(SHF(I).LT.0) SHF(I) = 0.0
+	  	  ENDIF
+	   END DO
+      ENDIF         
+   
+c     Adjust SHF(I) in hard pan layer
+
+      DO I=1,NLAYR
+          IF(DS(I+1).GT.HPD.AND.DS(I).LE.HPD) THEN
+             SHF(I) = HPF
+          ENDIF
+      END DO
+      
+      
+       IF(KSAT.GT.0) THEN
+         SWCN(NLAYR) = KSAT
+       ENDIF
+      
+557      CONTINUE
+
+!----------------------------------------------------------------------
+! End of Optimizer Adjustments
+!WDB 2/16/2022
+!----------------------------------------------------------------------
+  
 
       RETURN
 

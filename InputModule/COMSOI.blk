@@ -15,6 +15,9 @@
 !     09/01/2011 chp added van Genuchten parameters
       REAL alphaVG(NL), mVG(NL), nVG(NL), WCR(NL)
 
+!     03/25/22 WDB added GeoSim optimization soil parameters
+      REAL HPF, HPD, ETDR, RHRF, KSAT, PASW
+
       CHARACTER*5   SLTXS,SMHB,SMPX,SMKE,SGRP,SCOM
       CHARACTER*10  PEDON,SLNO
       CHARACTER*11  SCOUNT
@@ -33,3 +36,6 @@
      &              CACO,EXTAL,EXTFE,EXTMN,TOTBAS,TOTN,
      &              PTERMA,PTERMB,EXK,EXMG,EXNA,EXTS,SLEC, EXCA, SASC,
      &              alphaVG, mVG, nVG, WCR
+
+!WDB 3/26/22 Added to pass soil optimization parameter
+	 COMMON /SOI04/ HPF, HPD, ETDR, RHRF, KSAT, PASW
