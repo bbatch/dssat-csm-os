@@ -255,7 +255,7 @@ C
       HPF = -99
       HPD = -99
       RHRF = -99
-      ETDR = -99
+      ETDR = 2.0
       KSAT = -99
       PASW = -99
       OP1 = -99
@@ -669,7 +669,11 @@ C** WDB End Changes
 !-----------------------------------------------------------------------      
 !WDB 2/16/2022  Read Optimizer Files and Overwrite Soil Parameters
 !-----------------------------------------------------------------------
-
+C        Set ETDR to 2.0 (default) if it is negative to prevent problems
+C        with GHG emissions
+         IF(ETDR.LT.0) THEN 
+             ETDR = 2.0
+         ENDIF
          INQUIRE (FILE = 'PARAM.DAT',EXIST = FEXIST)
 	   IF(.NOT.FEXIST) GOTO 557
         
