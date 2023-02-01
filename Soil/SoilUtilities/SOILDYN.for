@@ -280,7 +280,7 @@ C**WDB
       IF (ERRNUM .NE. 0) CALL ERROR (ERRKEY,ERRNUM,FILEIO,LNUM)
       
 !-----------------------------------------------------------------------
-!WDB 4-6-22 Modified to read in optimizer parameters from soil file
+!WDB 4-6-22 Modified to read in optimizer parameters from IO file (ie. DSSAT48.INP)
 !    Original code:      
 !      READ(LUNIO, 80, IOSTAT=ERRNUM,ERR=1000) 
 !     &           SALB, U, SWCON, CN, DMOD, SLPF, SMPX
@@ -449,7 +449,7 @@ C         PASW = 0.0
 	PASW = OP10     
       ENDIF
 
-C** WDB Skip this for April version B. This is now done in IPSOIL_Inp
+C** WDB Skip this for April 2022 version B. This is now done in IPSOIL_Inp
        goto 789
 C      Now, modify parameters using optimum parameter values or default
 c      values from soil.sol
