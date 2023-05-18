@@ -21,16 +21,15 @@ C  LTRANS : True if transplanted (itrans=2 or 3)
 C=======================================================================
 
       SUBROUTINE RI_GROSUB (CONTROL, ISWITCH,
-     &    ASMDOT, CO2, CDTT_TP, CUMDTT, DTT, DISLA,       !Input
-     &    FERTILE, FIELD,  FLOOD, FracRts, ISTAGE,        !Input
-     &    ITRANS, LTRANS, NEW_PHASE, NH4, NO3, P1, P1T,   !Input     
-     &    P3, P4, PHEFAC, PPLTD, RLV, RTDEP, SDEPTH,      !Input
-     &    SDTT_TP, SeedFrac, SI3, SOILPROP, SKi_AVAIL,    !Input
-     &    SPi_AVAIL, SRAD, ST, STRCOLD, STRESSW, STRHEAT, !Input
-     &    SUMDTT, SW, SWIDOT, SWFAC, TAGE, TBASE, TF_GRO, !Input
-     &    TMAX, TMIN, TSGRWT, TURFAC, VegFrac, WLIDOT,    !Input
-     &    WRIDOT,WSIDOT, WSTRES, XSTAGE, XST_TP, YRPLT,   !Input
-     &    YRSOW,HARVFRAC,                                 !Input
+     &    CO2, CDTT_TP, CUMDTT, DTT, FERTILE, FIELD,      !Input
+     &    FLOOD, FracRts, ISTAGE, ITRANS, LTRANS,         !Input
+     &    NEW_PHASE, NH4, NO3, P1, P1T, P3, P4, PHEFAC,   !Input     
+     &    RLV, RTDEP, SDEPTH, SDTT_TP, SeedFrac,          !Input
+     &    SI3, SOILPROP, SKi_AVAIL, SPi_AVAIL, SRAD, ST,  !Input
+     &    STRCOLD, STRESSW, STRHEAT, SUMDTT, SW, SWFAC,   !Input
+     &    TAGE, TBASE, TF_GRO, TMAX, TMIN, TSGRWT,        !Input
+     &    TURFAC, VegFrac, WSTRES, XSTAGE, XST_TP, YRPLT, !Input
+     &    YRSOW,                                          !Input
      &    EMAT, FLOODN, PLANTS, RTWT,                     !I/O
      &    AGEFAC, APTNUP, AREAH, AREALF, BIOMAS, CANNAA,  !Output
      &    CANWAA, CARBO, DYIELD, GNUP, GPP, GPSM, GRAINN, !Output
@@ -52,6 +51,9 @@ C=======================================================================
       USE Interface_SenLig_Ceres
 
       IMPLICIT  NONE
+      EXTERNAL YR_DOY, RI_IPGROSUB, RI_IPCROP, TABEX, ERROR,
+     &  RI_NFACTO, CALCSHK, RI_TILLSUB, RI_NUPTAK, RI_KUPTAK, 
+     &  P_Ceres, PlantInit, TRNSPL_GROSUB, MZ_KUPTAK
       SAVE
 
       CHARACTER*1 ISWWAT, ISWNIT, ISWPHO, ISWPOT
@@ -98,7 +100,7 @@ C=======================================================================
       REAL TPLAG, TPLANTS, TRLOS, TRNLOS, TSGRWT, TSHOCK, TSTMWT
       REAL UNFILL, VANC, VMNC, WSTRES, WTLF, PCNVEG, CumNUptake
       REAL XANC, XGNP, XN, XSTAGE, XST_TP
-      REAL HARVFRAC(2)
+!     REAL HARVFRAC(2)
 
       REAL DUMMY
       REAL, DIMENSION(6) :: SI3
@@ -161,7 +163,7 @@ C=======================================================================
      &    ATEMP, CROP, FILEC, G1, G2, G3, P5, PHINT, PATHCR, 
      &    PLANTS, PLPH, PLTPOP, ROWSPC, SDWTPL)
 
-      CALL RI_IPCROP (FILEC, PATHCR, CROP, 
+      CALL RI_IPCROP (FILEC, PATHCR, !CROP, 
      &    CO2X, CO2Y, MODELVER, PORMIN, 
         !&    CO2X, CO2Y, MODELVER, PHINT, PORMIN,  
      &    RLWR, RWUEP1, RWUMX, SHOCKFAC)
@@ -294,7 +296,8 @@ C=======================================================================
      &    FLOOD, NH4, NO3, PDWI, PGRORT, PLANTS, PTF,     !Input
      &    RCNP, RLV, RTWT, SOILPROP, ST, STOVWT, SW, TCNP,!Input
      &    FLOODN, STOVN, RANC, ROOTN, TANC,               !I/O
-     &    RNLOSS, SENESCE, TRNLOS, UNH4, UNO3, PLIGRT, CumNUptake)     !Output
+     &    RNLOSS, SENESCE, TRNLOS, UNH4, UNO3, PLIGRT,    !Output
+     &    CumNUptake)                                     !Output
 
       CALL RI_KUPTAK(
      &       ISWPOT, NLAYR, SKi_Avail, UNH4, UNO3,        !Input
@@ -615,7 +618,8 @@ CCCCC-PW
       !
       PCO2  = TABEX (CO2Y,CO2X,CO2,10)
       PCARB = PCARB*PCO2
-      PRFT  = 1.0-0.0025*((0.25*TMIN+0.75*TMAX)-26.0)**2   !need to lower so temp is 10 for prft=0 mar17
+!     need to lower so temp is 10 for prft=0 mar17
+      PRFT  = 1.0-0.0025*((0.25*TMIN+0.75*TMAX)-26.0)**2   
       PRFT  = AMAX1 (PRFT,0.0)
       IF (PRFT .GT. 1.0) THEN
           PRFT = 1.0                                
@@ -1237,10 +1241,11 @@ C
       IF (XSTAGE .LT. 10.0 .AND. FIELD) THEN
          IF (ISWNIT .EQ. 'Y' ) THEN
          CALL RI_NUPTAK (DYNAMIC, 
-     &      FLOOD, NH4, NO3, PDWI, PGRORT, PLANTS, PTF,     !Input
-     &      RCNP, RLV, RTWT, SOILPROP, ST, STOVWT, SW, TCNP,!Input
-     &      FLOODN, STOVN, RANC, ROOTN, TANC,               !I/O
-     &    RNLOSS, SENESCE, TRNLOS, UNH4, UNO3, PLIGRT, CumNUptake)     !Output
+     &    FLOOD, NH4, NO3, PDWI, PGRORT, PLANTS, PTF,     !Input
+     &    RCNP, RLV, RTWT, SOILPROP, ST, STOVWT, SW, TCNP,!Input
+     &    FLOODN, STOVN, RANC, ROOTN, TANC,               !I/O
+     &    RNLOSS, SENESCE, TRNLOS, UNH4, UNO3, PLIGRT,    !Output
+     &    CumNUptake)                                     !Output
          ENDIF
 	   ! Switches for P and K
          CALL MZ_KUPTAK(
@@ -1517,6 +1522,7 @@ C=======================================================================
                          ! which contain control information, soil
                          ! parameters, hourly weather data.
       IMPLICIT     NONE
+      EXTERNAL ERROR, FIND
 
       CHARACTER*2 CROP
       CHARACTER*6  ERRKEY, SECTION
