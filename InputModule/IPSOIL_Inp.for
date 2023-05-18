@@ -399,7 +399,7 @@ c**WDB Added GeoSim optimizer parameters 3/25/2022
 
                  CASE('HPFA'); READ(C255(PP:C2),*,IOSTAT=ERR) HPF   
                  CASE('HPDP'); READ(C255(PP:C2),*,IOSTAT=ERR) HPD
-                 CASE('RHRF'); READ(C255(PP:PPP),*,IOSTAT=ERR) RHRF
+                 CASE('RHRF'); READ(C255(PP:PPP+1),*,IOSTAT=ERR) RHRF
                  CASE('ETDS'); READ(C255(PP:C2),*,IOSTAT=ERR) ETDR
                  CASE('KSAT'); READ(C255(PP:C2),*,IOSTAT=ERR) KSAT
                  CASE('PASW'); READ(C255(PP:C2),*,IOSTAT=ERR) PASW                                         
@@ -676,7 +676,6 @@ C        with GHG emissions
          ENDIF
          INQUIRE (FILE = 'PARAM.DAT',EXIST = FEXIST)
 	   IF(.NOT.FEXIST) GOTO 557
-        
          OPEN (88,FILE='PARAM.DAT',STATUS='UNKNOWN')
          READ(88,*) OP1   !SCS curve number
          READ(88,*) OP2   !drainage rate coefficient (used when ksat not defined)
@@ -734,6 +733,8 @@ C        with GHG emissions
 C      Now, modify parameters using optimum parameter values from param.dat or
 c      values from new entries in soil.sol
 
+557   continue
+
 C     Adjust LL(I) to change available water holding capacity
       IF(PASW.GT.-90) THEN
         DO I=1,NLAYR
@@ -763,12 +764,12 @@ c     Adjust SHF(I) in hard pan layer
           ENDIF
       END DO
       
-      
+c     Adjust KSAT in bottom soil layer      
        IF(KSAT.GT.0) THEN
          SWCN(NLAYR) = KSAT
        ENDIF
       
-557      CONTINUE
+c** WDB 2/13/23 557      CONTINUE
 
 !----------------------------------------------------------------------
 ! End of Optimizer Adjustments

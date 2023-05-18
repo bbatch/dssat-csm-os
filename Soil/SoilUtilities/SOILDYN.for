@@ -215,8 +215,8 @@ C-----------------------------------------------------------------------
       SALB   = -99.
       DMOD   = -99.
       SLPF   = -99.
-c**WDB 2/26/22      ETDR   = -99.
-      ETDR = 0.2
+c**WDB 2/3/23 Initialize ETDR so it has no effect
+      ETDR = 2.0
 C**WDB      
       CLAY   = -99.
       SILT   = -99.
@@ -377,7 +377,7 @@ C**WDB
 ! This really only affected the LL through PASW. For some reason, WR could not be
 ! changed with RHRF in this subroutine (maybe structured variable).         
 !-----------------------------------------------------------------------
-
+        goto 789
          INQUIRE (FILE = 'PARAM.DAT',EXIST = FEXIST)
 	   IF(.NOT.FEXIST) GOTO 557
          OP1 = -99
