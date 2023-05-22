@@ -130,6 +130,8 @@ C     The variable "ISWITCH" is of type "SwitchType".
       !Delete existing output files
       CALL OPCLEAR
 
+
+
       CALL GETLUN('FILEIO', LUNIO)
       FILEIO = 'DSSAT48.INP'
 
