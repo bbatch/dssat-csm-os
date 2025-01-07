@@ -28,6 +28,7 @@ C  08/12/2003 CHP Added I/O error checking
 !  02/11/2009 CHP Do not run SoilDyn when ISWWAT = 'N'
 !                 Changed condition for missing or zero OC.
 !  01/24/2023 chp added SAEA to soil analysis in FileX for methane
+!  08/30/2024  FO Added WARNING message if LL > DUL > SAT.
 C-----------------------------------------------------------------------
 C  Called : Main
 C  Calls  : 
@@ -45,7 +46,7 @@ C-----------------------------------------------------------------------
       IMPLICIT NONE
       EXTERNAL ERROR, FIND, WARNING, INFO, TEXTURECLASS, SOILLAYERCLASS,
      &  CALBROKCRYPARA, RETC_VG, SOILLAYERTEXT, PRINT_SOILPROP, 
-     &  SETPM, OPSOILDYN, ALBEDO, TILLEVENT, SOILMIXING
+     &  SETPM, OPSOILDYN, ALBEDO_avg, TILLEVENT, SOILMIXING
       SAVE
 
       LOGICAL NOTEXTURE, PHFLAG, FIRST, NO_OC
@@ -84,7 +85,7 @@ C-----------------------------------------------------------------------
       REAL, DIMENSION(NL) :: PTERMB, EXK, EXMG, EXNA, EXTS, SLEC, EXCA
 
 !     vanGenuchten parameters
-      REAL, DIMENSION(NL) :: alphaVG, mVG, nVG  !, MSkPa
+      REAL, DIMENSION(NL) :: alphaVG, mVG, nVG
 !     Brook & Corey model parameters
       Double Precision, DIMENSION(NL) :: hb, lambda
 
@@ -1199,7 +1200,7 @@ C  tillage and rainfall kinetic energy
       ENDIF
 
 !     ------------------------------------------------------------------
-      CALL ALBEDO(KTRANS, MEINF, MULCH, SOILPROP, SW(1), XHLAI)
+      CALL ALBEDO_avg(KTRANS, MEINF, MULCH, SOILPROP, SW(1), XHLAI)
 
 !     IF (INDEX('RSN',MEINF) .LE. 0) THEN
       IF (INDEX('RSM',MEINF) > 0) THEN 
@@ -1222,7 +1223,7 @@ C  tillage and rainfall kinetic energy
 !         Change to SOM since initialization
 !         SOM units have already been converted to OM (not C)
           dSOM = SomLit(L) - SomLit_init(L) !kg[OM]/ha
-
+          
           IF (dSOM < 0.01) THEN
 !           No changes to soil properties due to organic matter
             BD_SOM(L)   = BD_INIT(L)
@@ -1527,6 +1528,22 @@ c** wdb orig          SUMKEL = SUMKE * EXP(-0.15*MCUMDEP)
         TOTAW = TOTAW + (DUL(L) - LL(L)) * DLAYR(L) * 10.
         POROS(L)  = 1.0 - BD(L) / 2.65
         IF (POROS(L) < DUL(L)) POROS(L) = SAT(L)
+      
+!       2024-08-30 FO - Protection for LL < DUL < SAT
+        IF ((DUL(L) - SAT(L)) .GT. 0.0) THEN
+          SAT(L) = DUL(L) + 0.01
+          MSG(1) = 'DUL greater than SAT due to Soil Organic Matter'
+          WRITE(MSG(2),'(A,I1,A,I1,A)') 'Setting: SAT(Layer = ',L,
+     &    ') = DUL(Layer = ',L,') + 0.01'
+          CALL WARNING(2,ERRKEY,MSG)
+        ENDIF
+        IF ((LL(L) - DUL(L)) .GT. 0.0) THEN
+          LL(L) = DUL(L) - 0.01
+          MSG(1) = 'LL greater than DUL due to Soil Organic Matter'
+          WRITE(MSG(2),'(A,I1,A,I1,A)') 'Setting: LL(Layer = ',L,
+     &    ') = DUL(Layer = ',L,') + 0.01'
+          CALL WARNING(2,ERRKEY,MSG)
+        ENDIF 
       ENDDO
 
       SOILPROP % BD     = BD     
@@ -1635,7 +1652,7 @@ c** wdb orig          SUMKEL = SUMKE * EXP(-0.15*MCUMDEP)
 
 
 !=======================================================================
-      SUBROUTINE ALBEDO(KTRANS, MEINF, MULCH, SOILPROP, SW1, XHLAI)
+      SUBROUTINE ALBEDO_avg(KTRANS, MEINF, MULCH, SOILPROP, SW1, XHLAI)
       !Update soil albedo based on mulch cover and soil water content in
       !top layer
 
@@ -1713,7 +1730,7 @@ c** wdb orig          SUMKEL = SUMKE * EXP(-0.15*MCUMDEP)
 !     &      FF, SWALB, MULCHCOVER, MSALB, CANCOV, CMSALB
 
       RETURN
-      END SUBROUTINE ALBEDO
+      END SUBROUTINE ALBEDO_avg
 !=======================================================================
 
 !=======================================================================
@@ -2273,8 +2290,6 @@ C=======================================================================
 !  08/17/2011  
 !-----------------------------------------------------------------------
 !  Called by: SoilDYN, CellInit_2D when (DYNAMIC = RUNINIT) and 
-!             (((INDEX('QFN',RNMODE) <=0 or (RUN=1 .AND. REPNO=11)) or 2D case)
-!  Calls    : 
 !=======================================================================
       SUBROUTINE SoilLayerClass(ISWITCH, 
      &    MULTI, DS, NLAYR, SLDESC, TAXON,                !Input
@@ -2390,12 +2405,12 @@ C=======================================================================
 
 !==============================================================================
 !     Subroutine SETPM
-!     Initialization for cell structure and initial conditions
-      SUBROUTINE SETPM(SOILPROP)                        !input/output
+!     Calculate the fraction of plastic mulch cover 
+      SUBROUTINE SETPM(SOILPROP)                 !input/output
 !   ---------------------------------------------------------
       USE ModuleData
       Implicit NONE
-      EXTERNAL ERROR, FIND, WARNING, GETLUN
+      EXTERNAL ERROR, FIND, WARNING, GETLUN, INFO
 
       Type (SoilType) SOILPROP
 
@@ -2425,7 +2440,8 @@ C=======================================================================
       SECTION = '*FIELD'
       CALL FIND(LUNIO, SECTION, LNUM, FOUND)
       IF (FOUND /= 0)  THEN
-      READ(LUNIO,'(79X,1x,F5.1, F6.2)',IOSTAT=ERR)PMWD, PMALB
+!     For 1D model, plastic mulch width is read from "bed width" variable in FileX
+      READ(LUNIO,'(79X,F6.0,F6.0)',IOSTAT=ERR) PMALB, PMWD
       IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,CONTROL%FILEIO,LNUM)
         IF ((ERR == 0) .AND. (PMALB .eq. 0.)) THEN
           PMALB = -99.
@@ -2450,34 +2466,36 @@ C=======================================================================
           WRITE(MSG(2),'("Row spacing (cm)         = ",F6.1)') ROWSPC_CM
           MSG(3) = "Simulating flat surface entirely covered " //
      &             "by by plastic mulch."
-          call warning(3,errkey,msg)
+          call INFO(3,errkey,msg)
         ELSEIF (PMWD .GT. 0.) THEN 
           PMCover   = .TRUE.
           WRITE(MSG(1),'("Plastic mulch width (cm) = ",F6.1)') PMWD
           WRITE(MSG(2),'("Row spacing (cm)         = ",F6.1)') ROWSPC_CM
           MSG(3)= "Simulating flat surface partially covered " // 
      &            "by plastic mulch."
-          call warning(3,errkey,msg)
+          call INFO(3,errkey,msg)
         ELSE
           PMCover   = .FALSE.
           MSG(1)= "Missing mulch cover width."
           MSG(2) = "Simulating flat surface with no plastic mulch."
-          call warning(2,errkey,msg)
+          call INFO(2,errkey,msg)
         ENDIF
       ELSE
         IF (PMWD .GT. 0) THEN
           PMCover   = .FALSE.
           MSG(1)= "Missing albedo for plastic mulch. "
           MSG(2)= "Simulating flat surface with no plastic mulch."
-          call warning(2,errkey,msg)
+          call INFO(2,errkey,msg)
         ELSE
           PMCover   = .FALSE.
           MSG(1)= "Simulating flat surface with no plastic mulch."
-          call warning(1,errkey,msg)
+          call INFO(1,errkey,msg)
         ENDIF
       ENDIF
-    
-      PMFRACTION = 0.0
+
+!     Default = no plastic mulch cover
+      PMFRACTION = 0.0  !no cover
+
       IF (PMCover) THEN
         if (PMWD .GE. ROWSPC_CM) THEN
           SOILPROP % SALB   = PMALB
@@ -2487,6 +2505,7 @@ C=======================================================================
         SOILPROP % MSALB  = MSALB
         SOILPROP % CMSALB = MSALB
       ENDIF
+
       CALL PUT("PM", "PMFRACTION", PMFRACTION)
 
       RETURN      

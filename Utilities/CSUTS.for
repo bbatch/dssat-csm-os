@@ -112,7 +112,13 @@
       ELSEIF (OPREAL.GT.99.99 .AND. OPREAL.LT.999.9)THEN
         WRITE (OPLINE,'(1X,F5.1)') OPREAL
       ELSE
-        WRITE (OPLINE,'(1X,I5)') NINT(OPREAL)
+        !TF - added if statement to avoid crashing when 
+        ! OPREAL is larger than 99999
+        IF(OPREAL .GT. 99999) THEN
+          WRITE (OPLINE,'(1X,I5)') -99
+        ELSE
+          WRITE (OPLINE,'(1X,I5)') NINT(OPREAL)
+        ENDIF
       ENDIF
 
       RETURN
@@ -1607,6 +1613,11 @@
       
       PYEARDOYIN = PYRIN*1000 + PDOYIN
 
+! TF - check if fileA inputs are in YYYYDDD format 04-16-2024
+      IF (DATEIN.GE.1000.AND.DATEIN.LE.PYEARDOYIN) THEN
+          DATEIN = DATEIN - PYRIN*1000
+      ENDIF
+
       IF (DATEIN.LT.1000) THEN
         IF (DATEIN.GT.PDOYIN) THEN
           DATEINADJ = PYRIN*1000 + DATEIN
@@ -2119,7 +2130,7 @@
       CHARACTER (LEN=10) newchar
       CHARACTER (LEN=78) message(10)
       INTEGER            pos,i,lenchar,tvilent,fnumerr
-!      INTEGER            fnumwrk
+!     INTEGER            fnumwrk
       REAL               tvrfromc,number
 !     LOGICAL            fopen
 
@@ -2227,7 +2238,7 @@
       CHARACTER (LEN=10) newchar
       CHARACTER (LEN=78) message(10)
       INTEGER            pos,i,lenchar,tvilent,fnumerr
-!      INTEGER            fnumwrk
+!     INTEGER            fnumwrk
       REAL               tvrfromc,number,tvrfromccde
 !     LOGICAL            fopen
 

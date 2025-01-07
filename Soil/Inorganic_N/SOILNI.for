@@ -233,7 +233,7 @@ C=======================================================================
         !*** temp debugging chp
         TNOM = 0.0
 
-!       Seasonal cumulative vaules
+!       Seasonal cumulative values, kg[N]/ha
         CMINERN  = 0.0  !mineralization
         CIMMOBN  = 0.0  !immobilization
         CNETMINRN= 0.0  !net mineralization
@@ -243,6 +243,9 @@ C=======================================================================
         CLeach   = 0.0  !leaching
         CNTILEDR = 0.0  !N loss to tile drainage     !HJ added
         WTNUP    = 0.0  !N uptake
+
+        TOTAML = 0.0    !Ammonia volatilization
+
         CN2Onitrif=0.0  !N2O[N] from nitrification
         CN2Odenit =0.0  !N2O[N] from nitrification
         CNOflux   = 0.0 !NO
@@ -253,14 +256,14 @@ C=======================================================================
         denitrif = 0.0
         N2O_data % wfps = 0.0
 
-!     proportion of N2O from nitrification PG calibrated this variable for DayCent
-      pn2Onitrif = .001  
-!     pn2Onitrif = .02  
-!     chp - from DayCent - is this the equivalent value?
-!     double turnovfrac = 0.02;
+!       proportion of N2O from nitrification PG calibrated this variable for DayCent
+        pn2Onitrif = .001  
+!       pn2Onitrif = .02  
+!       chp - from DayCent - is this the equivalent value?
+!       double turnovfrac = 0.02;
 ! chp - tried pn2Onitrif = .02, but n2o emissions are way too high.
-       
-        TFNITY = 0.0    !
+
+        TFNITY = 0.0
         IUOF   = 0
         IUON   = .FALSE.
 
@@ -305,6 +308,7 @@ C=======================================================================
 
         LFD10 = CONTROL % YRSIM
 
+!       Initialize denitrification routines
         SELECT CASE(MEGHG)
         CASE("1")
           CALL Denit_DayCent (CONTROL, ISWNIT, 
@@ -314,16 +318,15 @@ C=======================================================================
 
         CASE DEFAULT
           CALL Denit_Ceres (CONTROL, ISWNIT, 
-     &    DUL, FLOOD, KG2PPM, LITC, NLAYR, NO3, SAT,  !Input
+     &    DUL, KG2PPM, LITC, NLAYR, NO3, SAT,         !Input
      &    SSOMC, SNO3, ST, SW,                        !Input
      &    DLTSNO3,                                    !I/O
      &    CNOX, TNOXD, N2O_data)                      !Output
         END SELECT
 
+!     GHG emissions
       CALL N2Oemit(CONTROL, ISWITCH, dD0, SOILPROP, N2O_DATA) 
-
       CALL OpN2O(CONTROL, ISWITCH, SOILPROP, N2O_DATA) 
-
       CALL OPGHG(CONTROL, ISWITCH, N2O_data, CH4_data)
 
       IF (CONTROL%RUN .EQ. 1 .OR. INDEX('QF',CONTROL%RNMODE) .LE. 0)THEN
@@ -496,10 +499,9 @@ C=======================================================================
 
 !         Soil water factor WFSOM.
           WFSOM = 1.0 - 0.5 * XL
-          
+
         ENDIF   !End of IF block on SW vs. DUL.
 
-!     
 !       PH factor (from RICE model)
         IF (FLOOD .GT. 0.0) THEN
            WFSOM    = 0.75
@@ -507,7 +509,7 @@ C=======================================================================
 
 !       Limit the soil water factors between 0 and 1.
         WFSOM = AMAX1 (AMIN1 (WFSOM, 1.), 0.)
-        
+
 !       Calculate the soil temperature factor for the urea hydrolysis.
         TFUREA = (ST(L) / 40.) + 0.20
         TFUREA = AMAX1 (AMIN1 (TFUREA, 1.), 0.)
@@ -750,7 +752,7 @@ C=======================================================================
 
         CASE DEFAULT
           CALL Denit_Ceres (CONTROL, ISWNIT, 
-     &    DUL, FLOOD, KG2PPM, LITC, NLAYR, NO3, SAT,  !Input
+     &    DUL, KG2PPM, LITC, NLAYR, NO3, SAT,         !Input
      &    SSOMC, SNO3, ST, SW,                        !Input
      &    DLTSNO3,                                    !I/O
      &    CNOX, TNOXD, N2O_data)                      !Output
@@ -913,9 +915,12 @@ C=======================================================================
         UREA(L) = UREA(L) + DLTUREA(L)
 
 !       Underflow trapping
-        IF (ABS(SNO3(L)) .LT. 1.E-8) SNO3(L) = 0.0
-        IF (ABS(SNH4(L)) .LT. 1.E-8) SNH4(L) = 0.0
-        IF (ABS(UREA(L)) .LT. 1.E-8) UREA(L) = 0.0
+!        IF (ABS(SNO3(L)) .LT. 1.E-8) SNO3(L) = 0.0
+!        IF (ABS(SNH4(L)) .LT. 1.E-8) SNH4(L) = 0.0
+!        IF (ABS(UREA(L)) .LT. 1.E-8) UREA(L) = 0.0
+!        IF (SNO3(L) .LE. 0.0) SNO3(L) = 0.0
+!        IF (SNH4(L) .LE. 0.0) SNH4(L) = 0.0
+!        IF (UREA(L) .LE. 0.0) UREA(L) = 0.0
 
 !       Conversions.
         NO3(L)  = SNO3(L) * KG2PPM(L)
@@ -1045,20 +1050,32 @@ C-----------------------------------------------------------------------
 ! ADCOEF(L)     Anion adsorption coefficient for soil layer L;  for reduced 
 !                 anion (nitrate) flow in variable-charge soils (ADCOEF = 0 
 !                 implies no anion retention) (cm3 (H2O] / g [soil])
+! ADDSNH4(L)     Rate of change of ammonium in soil layer L (kg [N] / ha / d)
+! ADDSNO3(L)     Rate of change of nitrate in soil layer L (kg [N] / ha / d)
+! ADDUREA(L)     Rate of change of urea content in soil layer L
+!                     (kg [N] / ha / d)
 ! AK            Maximum hydrolysis rate of urea (i.e. proportion of urea 
 !                 that will hydrolyze in 1 day under optimum conditions). 
 !                 AK >= 0.25. Also: Today's value of the nitrification 
-!                 potential, calculated from the previous day’s value (d-1)
+!                  potential, calculated from the previous day's value (d-1)
 ! ALGFIX        N in algae (kg [N] / ha)
 ! ALI            
+! AMTFER        Amount of N in fertilizer applications
 ! NITRIF(L)     Daily nitrification rate (kg [N] / ha / d)
 ! BD(L)         Bulk density, soil layer L (g [soil] / cm3 [soil])
 ! BD1           Bulk density of oxidized layer (g [soil] / cm3 [soil])
+! CIMMOBN        Cumulative seasonal net immobilization of N in soil profile (kg[N]/ha) 
+! CLeach         Season cumulative N leached from soil (kg [N] / ha)
+! CMINERN        Cumulative seasonal mineralization of N in soil profile (kg[N]/ha)
+! CNETMINRN      Cumulative seasonal net mineralization of N in soil profile (kg[N]/ha) 
+!                = mineralization - immobilization
+! CNITRIFY       Cumulative nitrification (kg [N] / ha)
+! CNUPTAKE       Cumulative N uptake
 ! CONTROL       Composite variable containing variables related to control 
 !                 and/or timing of simulation.  The structure of the 
 !                 variable (ControlType) is defined in ModuleDefs.for. 
 ! CUMFNRO       Cumulative N lost in runoff over bund (kg [N] / ha)
-! CW            Water extractable SOM carbon (µg [C] / g [soil])
+! CW             Water extractable SOM carbon (Âµg [C] / g [soil])
 ! DENITRIF      Denitrification rate (kg [N] / ha / d)
 ! DLAG(L)       Number of days with soil water content greater than the 
 !                 drained upper limit for soil layer L.  For 
@@ -1085,6 +1102,9 @@ C-----------------------------------------------------------------------
 ! DUL(L)        Volumetric soil water content at Drained Upper Limit in 
 !                 soil layer L (cm3[water]/cm3[soil])
 ! ES            Actual soil evaporation rate (mm/d)
+! FERTDAY        Date of last fertilizer application (YYYYDDD)
+! FERTDATA       Fertilizer type
+! FertFactor     Ratio between ROWS space and BEDWD
 ! FLOOD         Current depth of flooding (mm)
 ! FLOODN        Composite variable which contains flood nitrogen mass and 
 !                 concentrations. Structure of variable is defined in 
@@ -1102,27 +1122,36 @@ C-----------------------------------------------------------------------
 !                 3:lignin (kg [residue pool] / ha)
 ! SSOMC(L)       Carbon in stable organic matter (humus) (kg [C] / ha)
 ! HUMFRAC       Humus fraction that decomposes (fraction)
+! IMM           Immobilization of element IEL (1=N, 2=P) in soil layer L . (kg/ha)
+!                The amounts of inorganic N and P that are removed from 
+!                 the soil (immobilized) when organic matter decomposes.   
 ! ISWITCH       Composite variable containing switches which control flow 
 !                 of execution for model.  The structure of the variable 
 !                 (SwitchType) is defined in ModuleDefs.for. 
+! ISWNIT         Nitrogen simulation switch (Y or N) 
 ! IUOF          Critical Julian day when all urea is assumed to be 
 !                 hydrolyzed (this is assumed to occur 21 days after the 
 !                 urea application) (d)
 ! IUON          Flag indicating presence of urea (true or false) 
-! KG2PPM(L)     Conversion factor to switch from kg [N] / ha to µg [N] / g 
+! KG2PPM(L)     Conversion factor to switch from kg [N] / ha to mg [N] /kg 
 !                 [soil] for soil layer L 
 ! LFD10         Date, 10 days after last fertilization.  Used to determine 
 !                 whether hourly flood chemistry computations will be done 
 !                 (see DAILY variable). (YYYYDDD)
+! LITC           Carbon in fresh organic matter in units of kg[C]/ha
+!                  soil evaporation: + = upward, -- = downward (cm/d)
 ! LL(L)         Volumetric soil water content in soil layer L at lower 
 !                 limit (cm3 [water] / cm3 [soil])
+! MNR(L,IEL)    Mineralization of element IEL (1=N, 2=P) in soil layer cell 
+!                  The amounts of inorganic N and P that are added to the soil
+!                  when organic matter decomposes.  (kg/ha/d)
 ! NBUND         Number of bund height records 
-! NH4(L)        Ammonium N in soil layer L (µg[N] / g[soil])
+! NH4(L)        Ammonium N in soil layer L (ï¿½g[N] / g[soil])
 ! NITRIFppm        Nitrification rate (kg [N] / ha - d)
 ! NL            Maximum number of soil layers = 20 
 ! NLAYR         Actual number of soil layers 
 ! NNOM          Net mineral N release from all SOM sources (kg [N] / ha)
-! NO3(L)        Nitrate in soil layer L (µg[N] / g[soil])
+! NO3(L)        Nitrate in soil layer L (ï¿½g[N] / g[soil])
 ! NSOURCE       Flag for N source (1 = urea, 2 = NO3) 
 ! NSWITCH       Nitrogen switch - can be used to control N processes (0-No 
 !                 N simulated, 1-N simulated, 5-Nitrification off, 
@@ -1143,7 +1172,8 @@ C-----------------------------------------------------------------------
 !                 bulk density, drained upper limit, lower limit, pH, 
 !                 saturation water content.  Structure defined in ModuleDefs. 
 ! SRAD          Solar radiation (MJ/m2-d)
-! ST(L)         Soil temperature in soil layer L (°C)
+! SSOMC(L)      Carbon in stable organic matter (humus) (kg [C] / ha)
+! ST(L)         Soil temperature in soil layer L (ï¿½C)
 ! SW(L)         Volumetric soil water content in layer L
 !                (cm3 [water] / cm3 [soil])
 ! SWEF          Soil water evaporation fraction; fraction of lower limit 
@@ -1152,15 +1182,15 @@ C-----------------------------------------------------------------------
 ! T2            Temperature factor for nitrification 
 ! TFACTOR       Temperature factor for nitrification 
 ! TFDENIT       Temperature factor for denitrification rate (range 0-1) 
-! TFNITY(L)     Yesterday’s soil temperature factor for nitrification 
+! TFNITY(L)     Yesterdayï¿½s soil temperature factor for nitrification 
 !                 (range 0-1) 
 ! TFUREA        Soil temperature factor for urea hydrolysis (range 0-1) 
 ! TIMMOBILIZE   Cumulative N immoblized (kg [N] / ha)
 ! TKELVIN       Soil temperature (oK)
 ! TLAG          Temperature factor for nitrification (0-1) 
 ! CLeach        Cumulative N leached from soil (kg [N] / ha)
-! TMAX          Maximum daily temperature (°C)
-! TMIN          Minimum daily temperature (°C)
+! TMAX          Maximum daily temperature (ï¿½C)
+! TMIN          Minimum daily temperature (ï¿½C)
 ! TMINERALIZE   Cumulative mineralization (kg [N] / ha)
 ! TNH4          Total extractable ammonium N in soil profile (kg [N] / ha)
 ! TNH4NO3       Total amount of inorganic N (NH4 and NO3) across soil 
@@ -1195,4 +1225,5 @@ C-----------------------------------------------------------------------
 !                 in soil as NH4; Also, Amount of NO3 that cannot denitrify 
 !                 but stays behind in the soil as NO3 (kg [N] / ha)
 ! YEAR          Year of current date of simulation 
+! YRDOY          Current day of simulation (YYDDD)
 !***********************************************************************
