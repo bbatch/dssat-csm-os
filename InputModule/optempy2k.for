@@ -517,16 +517,15 @@ C-----------------------------------------------------------------------
 C-----------------------------------------------------------------------
 C
 C-----------------------------------------------------------------------
-!WDB 4-6-22 Added 6 Optimization parameters to soil file
+
         WRITE (LUNIO,980,IOSTAT=ERRNUM) SCOM,SALB,U,SWCON,CN2,SLNF,SLPF,
-!     &         SMHB,SMPX,SMKE,SGRP
-     &         SMHB,SMPX,SMKE,SGRP, HPF, HPD, ETDR, KSAT, PASW, RHRF
+     &         SMHB,SMPX,SMKE,SGRP
+ 
         LINIO = LINIO + 1
         IF (ERRNUM .NE. 0) CALL ERROR (ERRKEY,ERRNUM,FILEIO,LINIO)
 
-!wdb 4-6-22 Modified to add 6 optimizer variables to DSSAT48.INP file      
-  980 FORMAT (1X,A5,1X,F5.2,1X,F5.1,1X,F5.2,1X,F5.0,2(1X,F5.2),4(1X,A5),
-     &        F6.2,1X,F6.2,1X,F6.2,1X,F6.2,1X,F6.2, 1X,F8.4)
+        
+  980 FORMAT (1X,A5,1X,F5.2,1X,F5.1,1X,F5.2,1X,F5.0,2(1X,F5.2),4(1X,A5))
         
 C-----------------------------------------------------------------------
 C
