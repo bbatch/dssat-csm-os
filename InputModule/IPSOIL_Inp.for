@@ -423,7 +423,6 @@ C** WDB End Changes
                                
                  IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILES,LINSOL)
                ENDDO
-
              ELSE
                !Soil layer data
                 L = L + 1
