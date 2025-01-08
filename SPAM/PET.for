@@ -571,7 +571,6 @@ C
       RNET= (1.0-ALBEDO)*SRAD - RADB
 
 C     Compute EO using Penman-Montieth
-
       RNETMG = (RNET-G)
 C     !MJ/m2/d
         ET0 = ((S*RNETMG + (DAIR*SHAIR*VPD)/ra)/(S+PSYCON*(1+rs/ra)))

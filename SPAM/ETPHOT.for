@@ -662,6 +662,19 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
           PG = PGDAY/44.0*30.0 * SLPF
           PGCO2 = PGDAY * SLPF
 
+          
+!*****************************************
+!WDB 1-7-2025
+!Drought Tolerance Effect
+!Strategy 1: Reduction of transpiration under mild stress
+
+          EOP = MIN(EOP,((1.0-EXP(-1.527*TRWUP*10/EOP))*EOP))
+           PG = MIN(PG,(  (1.0-EXP(-1.572*TRWUP*10/EOP)) *PG))
+           
+! Strategy 2: Reduction of transpiration due to vapor pressure deficit
+! Need to bring VPD into this subroutine using the Get command
+! Example:       Call GET('PLANT', 'CANHT',  CANHT)
+           
 !*****************************************
 !         Calculate daily water stess factors (from SWFACS)
           SWFAC = 1.0
@@ -670,8 +683,9 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
               SWFAC = TRWUP / (EOP * 0.1)
             ENDIF
           ENDIF
-!*****************************************
 
+
+          
           IF (MEEVP .NE. 'Z') THEN
 C
 C KJB USE THE REAL MID-DAY WATER STRESS FACTOR HERE, NOT THE DAILY ONE?
