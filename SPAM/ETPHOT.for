@@ -66,7 +66,17 @@ C-----------------------------------------------------------------------
       IMPLICIT NONE
       EXTERNAL ETIND, ETINP, ETPHR, OPETPHOT, OPSTEMP, PGIND, PGINP, 
      &  RADABS, ROOTWU, SOIL05, YR_DOY
+      
+      !WDB 1-7-2025 Added for drought tolerance
+      EXTERNAL VPSAT
+      REAL VPSAT
+      REAL TDEW, TMAX, VAPR
+      REAL GSsen,GSins,RatioEP,RatioPG,VPDt,ga
+      REAL Num,Den    
+      REAL ESAT, EAIR
       SAVE
+    
+      !WDB END      
 
       CHARACTER FILEIO*30,ISWWAT*1,MEEVP*1,MEPHO*1,METEMP*1,
      &  TYPPGN*3,TYPPGL*3, CROP*2
@@ -123,6 +133,8 @@ C         added by BAK on 10DEC2015
       REAL AGEQESL, AGEQESLN, CO2QESL, CO2QESLN, QEFFSL, QEFFSLN
 
       REAL PSTRES1  !3/22/2011
+      
+     
 
 !      SAVE AZIR,BETN,CEC,DLAYR,DLAYR2,DULE,FNPGL,FNPGN,LFANGD,
 !     &  LL,LL2,LLE,LMXREF,LNREF,LWIDTH,NELAYR,NLAYR,NSLOPE,PALB,
@@ -135,6 +147,10 @@ C         added by BAK on 10DEC2015
       TYPE (SwitchType)  ISWITCH
       TYPE (WeatherType) WEATHER
 
+!WDB 1-7-2025 Added for Drought Tolerance
+      TDEW   = WEATHER % TDEW
+      TMAX   = WEATHER % TMAX  
+!WDB End Changes
 !      PARAMETER (TINCR=24.0/TS)
         TINCR =24.0/REAL(TS)
 !                TINCR is the lenfth of a time increment in hours
@@ -668,14 +684,52 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
 !Drought Tolerance Effect
 !Strategy 1: Reduction of transpiration under mild stress
 
-          EOP = MIN(EOP,((1.0-EXP(-1.527*TRWUP*10/EOP))*EOP))
-           PG = MIN(PG,(  (1.0-EXP(-1.572*TRWUP*10/EOP)) *PG))
+        EOP = MIN(EOP,( (1.0-EXP(-1.527*TRWUP*10/EOP)) *EOP))
+        PG = MIN(PG,(  (1.0-EXP(-1.572*TRWUP*10/EOP))  *PG))
+                    
            
 ! Strategy 2: Reduction of transpiration due to vapor pressure deficit
 ! Need to bring VPD into this subroutine using the Get command
 ! Example:       Call GET('PLANT', 'CANHT',  CANHT)
-           
-!*****************************************
+
+        
+!     Previous code:
+      ESAT = (VPSAT(TMAX)+VPSAT(TMIN)) / 2.0              ! Pa
+      EAIR = VPSAT(TDEW)                                  ! Pa
+
+!     If actual vapor pressure is available, use it.
+!      IF (VAPR > 1.E-6) THEN
+!        EAIR = VAPR * 1000.
+!      ENDIF
+
+      VPDt = MAX(0.0, ESAT - EAIR)                         ! Pa    
+      VPDt = VPDt/1000   !kPa
+!        VPDt = 5.0
+        
+
+       GSsen = -0.0289*VPDt*VPDt + 1.27       
+       GSins = -0.0007*VPDt*VPDt + 1.27
+       ga = 10                   
+       RatioEP = (1/(1/GSsen + 1/ga))  / (1/ (1/GSins + 1/ga))
+       Num = 38*(1-exp(-84*GSsen-0.02)/38)+4
+       Den = 38*(1-exp(-84*GSins-0.02)/38)+4
+       RatioPG = Num/Den
+       
+!      Now modify EOP and PG based stomatal conductance ratios    
+!      for drought sensitive and insensitive varieties       
+       EOP = EOP * RatioEP
+       PG = PG * RatioPG
+       
+       
+!GSsen - stomatal conductance for drought sensitive varieties, mol/m2/s
+!GSins - stomatal conductance for drought insentitive varieties, mol/m2/s
+!RatioEP - fraction reduction in EOP due to drought tolerance
+!RATIOPG - fraction reduction in PG due to drought tolerance
+       
+!WDB End Drought Tolerance Calculations 1-8-2025           
+!************************************************************
+       
+       
 !         Calculate daily water stess factors (from SWFACS)
           SWFAC = 1.0
           IF (EOP .GT. 1.E-4 .AND. ISWWAT .EQ. 'Y') THEN
