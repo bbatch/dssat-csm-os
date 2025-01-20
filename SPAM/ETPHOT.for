@@ -719,7 +719,8 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
 !      for drought sensitive and insensitive varieties       
        EOP = EOP * RatioEP
        PG = PG * RatioPG
-       
+
+      
        
 !GSsen - stomatal conductance for drought sensitive varieties, mol/m2/s
 !GSins - stomatal conductance for drought insentitive varieties, mol/m2/s
