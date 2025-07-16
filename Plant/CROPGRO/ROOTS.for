@@ -398,6 +398,12 @@ C=======================================================================
       IMPLICIT NONE
       EXTERNAL GETLUN, FIND, ERROR, IGNORE
 
+!WDB 7/16/25
+!Added ECOTYPE.BLK file to pass drought tolerant parameters to other routines      
+      INCLUDE 'ECOTYPE.BLK'
+!WDB end changes      
+      
+      
       CHARACTER*6 ERRKEY
       PARAMETER (ERRKEY = 'ROOTS')
 
