@@ -66,6 +66,11 @@ C-----------------------------------------------------------------------
       IMPLICIT NONE
       EXTERNAL ETIND, ETINP, ETPHR, OPETPHOT, OPSTEMP, PGIND, PGINP, 
      &  RADABS, ROOTWU, SOIL05, YR_DOY
+ 
+      !WDB 7/16/25
+!Added ECOTYPE.BLK file to pass drought tolerant parameters to other routines      
+      INCLUDE 'ECOTYPE.BLK'
+!WDB end changes
       
       !WDB 1-7-2025 Added for drought tolerance
       EXTERNAL VPSAT

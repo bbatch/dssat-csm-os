@@ -1,0 +1,8 @@
+!ECOTYPE.BLK
+!Creaed by WDB on June 1, 2025
+!Purpose is to pass drought tolerant ecotype parameters from IPPHENOL to ETPHOT
+!and the root model
+
+      REAL DT1, DT2, DT3, DT4
+      COMMON /DROUGHT/DT1, DT2, DT3, DT4
+	

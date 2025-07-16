@@ -32,6 +32,11 @@ C=======================================================================
       IMPLICIT NONE
       EXTERNAL ERROR, FIND, GETLUN, IGNORE
 !-----------------------------------------------------------------------
+!WDB 7/16/25
+!Added ECOTYPE.BLK file to pass drought tolerant parameters to other routines      
+      INCLUDE 'ECOTYPE.BLK'
+!WDB end changes
+      
       CHARACTER*1   PLME, BLANK
       CHARACTER*2   CROP
       CHARACTER*3   CTMP(20), DLTYP(20)
@@ -212,11 +217,19 @@ C-----------------------------------------------------------------------
           CALL IGNORE(LUNECO, LNUM, ISECT, C255)
           IF (ISECT .EQ. 1 .AND. C255(1:1) .NE. ' ' .AND.
      &          C255(1:1) .NE. '*') THEN
+!            READ (C255,3100,IOSTAT=ERR) ECOTYP, ECONAM, IVRGRP, 
+!     &          IVRTEM, THVAR, (PHTHRS(K), K=1,4), PM06, PM09,
+!     &          (PHTHRS(K),K=11,12), TRIFOL, R1PPO, OPTBI, SLOBI
+! 3100FORMAT (A6, 1X, A16, 1X, 2(1X,A2), 7(1X,F5.0), 6X, 
+!     &          3(1X,F5.0), 2(6X), 3(1X,F5.0))
+     
             READ (C255,3100,IOSTAT=ERR) ECOTYP, ECONAM, IVRGRP, 
      &          IVRTEM, THVAR, (PHTHRS(K), K=1,4), PM06, PM09,
-     &          (PHTHRS(K),K=11,12), TRIFOL, R1PPO, OPTBI, SLOBI
+     &          (PHTHRS(K),K=11,12), TRIFOL, R1PPO, OPTBI, SLOBI, DT1,
+     &          DT2, DT3, DT4        
  3100       FORMAT (A6, 1X, A16, 1X, 2(1X,A2), 7(1X,F5.0), 6X, 
-     &          3(1X,F5.0), 2(6X), 3(1X,F5.0))
+     &          3(1X,F5.0), 2(6X), 3(1X,F5.0),18X,4(1x,F5.3))            
+            
             IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEGC,LNUM)
             IF (ECOTYP .EQ. ECONO) THEN
               EXIT

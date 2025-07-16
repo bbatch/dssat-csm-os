@@ -256,8 +256,14 @@ C-----------------------------------------------------------------------
       NSTRES = XNSTRES * 0.5 + PNSTRES * 0.5
       
 !      FRRT  = ATOP * (1.0 - (MIN(TURFAC,NSTRES)))*(1.0-FRRT) + FRRT
+
       FRRT  = ATOP * (1.0 - (MIN(TURFAC, NSTRES, PStres2))) * 
      &                    (1.0 - FRRT) + FRRT
+      
+c       IF(TURFAC.LT.1) THEN 
+c           print *,'TURFAC = ',TURFAC
+c          PAUSE
+c          endif     
 C-----------------------------------------------------------------------
 C     Cumulative turgor factor that remembers veg drought stress
 C     to shift partitioning between leaf and stem toward leaf,
