@@ -44,6 +44,11 @@ C-----------------------------------------------------------------------
       EXTERNAL IPROOT, INROOT, TABEX
       SAVE
 
+!WDB 7/16/25
+!Added ECOTYPE.BLK file to pass drought tolerant parameters to other routines      
+      INCLUDE 'ECOTYPE.BLK'
+!WDB end changes      
+      
       CHARACTER*1 ISWWAT
       CHARACTER*2 CROP
       CHARACTER*92 FILECC
@@ -247,8 +252,26 @@ C-----------------------------------------------------------------------
             IF (L .EQ. 1) THEN
               RTDEP = RTDEP + DTX * RFAC2
             ELSE
+
+!*****************************************
+!WDB 7-17-2025
+!Drought Tolerance Effect
+!Strategy 3: Increase rate of root depth today under drought stress
+!DT4 - Multiplication factor (0.25-1.0) to increase rooting depth under drought stress.
+!       according to Battisti et al., 2017. 
+!                
+!       DT4=0.25 is default in DSSATv4.8, which increases rate of root depth by 15% under SWFAC = 0.4
+!       DT4=1.0 will increase rooting depth increase today by 60% compared to default of 15% (default)
+!                
+!Battisti, R., P. Sentelhas, K.J. Boote, G. Camara, J. Farias and C. Basso. 2017. 
+!Assessment of soybean yield with altered water-related genetic improvement traits 
+! under climate change in Southern Brazil. European Journal of Agronomy 83(2017) 1-14. 
+ 
               RTDEP = RTDEP + DTX * RFAC2 * MIN(SWDF,SWEXF) *
-     &                (1. + 0.25 * (1. - MAX(SWFAC,0.40)))
+     &                (1. + DT4 * (1. - MAX(SWFAC,0.40)))                
+                
+!              RTDEP = RTDEP + DTX * RFAC2 * MIN(SWDF,SWEXF) *
+!     &                (1. + 0.25 * (1. - MAX(SWFAC,0.40)))
 C-----------------------------------------------------------------------
 C-KJB  DO NOT WANT TO DECREASE ROOT DEPTH WITH STRESS.  IF PG TO ROOTS
 C IS LOW BECAUSE OF SEED GROWTH OR IF WATER DEFICIT CAUSES LOW PG TO ROOTS

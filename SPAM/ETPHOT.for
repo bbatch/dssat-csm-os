@@ -688,9 +688,18 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
 !WDB 1-7-2025
 !Drought Tolerance Effect
 !Strategy 1: Reduction of transpiration under mild stress
+!DT1 - Drought tolerant coefficient 1 to limit transpiration and PG under
+!      drought according to Battisti et al., 2017. 
+!Battisti, R., P. Sentelhas, K.J. Boote, G. Camara, J. Farias and C. Basso. 2017. 
+!Assessment of soybean yield with altered water-related genetic improvement traits 
+! under climate change in Southern Brazil. European Journal of Agronomy 83(2017) 1-14.          
+          
+!        EOP = MIN(EOP,( (1.0-EXP(-1.527*TRWUP*10/EOP)) *EOP))
+!        PG = MIN(PG,(  (1.0-EXP(-1.572*TRWUP*10/EOP))  *PG))
+        
 
-        EOP = MIN(EOP,( (1.0-EXP(-1.527*TRWUP*10/EOP)) *EOP))
-        PG = MIN(PG,(  (1.0-EXP(-1.572*TRWUP*10/EOP))  *PG))
+        EOP = MIN(EOP,( (1.0-EXP(DT1*TRWUP*10/EOP)) *EOP))
+        PG = MIN(PG,(  (1.0-EXP(DT1*TRWUP*10/EOP))  *PG))        
                     
            
 ! Strategy 2: Reduction of transpiration due to vapor pressure deficit
@@ -711,9 +720,13 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
       VPDt = VPDt/1000   !kPa
 !        VPDt = 5.0
         
+!Original from Battisti et al. 
+!       GSsen = -0.0289*VPDt*VPDt + 1.27       
+!       GSins = -0.0007*VPDt*VPDt + 1.27
 
-       GSsen = -0.0289*VPDt*VPDt + 1.27       
-       GSins = -0.0007*VPDt*VPDt + 1.27
+       GSsen = -DT2*VPDt*VPDt + 1.27       
+       GSins = -DT3*VPDt*VPDt + 1.27
+       
        ga = 10                   
        RatioEP = (1/(1/GSsen + 1/ga))  / (1/ (1/GSins + 1/ga))
        Num = 38*(1-exp(-84*GSsen-0.02)/38)+4
