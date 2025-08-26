@@ -266,12 +266,14 @@ C-----------------------------------------------------------------------
 !Battisti, R., P. Sentelhas, K.J. Boote, G. Camara, J. Farias and C. Basso. 2017. 
 !Assessment of soybean yield with altered water-related genetic improvement traits 
 ! under climate change in Southern Brazil. European Journal of Agronomy 83(2017) 1-14. 
- 
+
+       IF(DT4.GT.0) THEN                
               RTDEP = RTDEP + DTX * RFAC2 * MIN(SWDF,SWEXF) *
      &                (1. + DT4 * (1. - MAX(SWFAC,0.40)))                
-                
-!              RTDEP = RTDEP + DTX * RFAC2 * MIN(SWDF,SWEXF) *
-!     &                (1. + 0.25 * (1. - MAX(SWFAC,0.40)))
+       ELSE         
+              RTDEP = RTDEP + DTX * RFAC2 * MIN(SWDF,SWEXF) *
+     &                (1. + 0.25 * (1. - MAX(SWFAC,0.40)))
+       ENDIF       
 C-----------------------------------------------------------------------
 C-KJB  DO NOT WANT TO DECREASE ROOT DEPTH WITH STRESS.  IF PG TO ROOTS
 C IS LOW BECAUSE OF SEED GROWTH OR IF WATER DEFICIT CAUSES LOW PG TO ROOTS

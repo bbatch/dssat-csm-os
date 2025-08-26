@@ -693,15 +693,17 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
 !Battisti, R., P. Sentelhas, K.J. Boote, G. Camara, J. Farias and C. Basso. 2017. 
 !Assessment of soybean yield with altered water-related genetic improvement traits 
 ! under climate change in Southern Brazil. European Journal of Agronomy 83(2017) 1-14.          
-          
+         
 !        EOP = MIN(EOP,( (1.0-EXP(-1.527*TRWUP*10/EOP)) *EOP))
 !        PG = MIN(PG,(  (1.0-EXP(-1.572*TRWUP*10/EOP))  *PG))
         
+        IF(DT1.GT.0) THEN
+          EOP = MIN(EOP,( (1.0-EXP(-DT1*TRWUP*10/EOP)) *EOP))
+          PG = MIN(PG,(  (1.0-EXP(-DT1*TRWUP*10/EOP))  *PG))        
+        endif            
 
-        EOP = MIN(EOP,( (1.0-EXP(DT1*TRWUP*10/EOP)) *EOP))
-        PG = MIN(PG,(  (1.0-EXP(DT1*TRWUP*10/EOP))  *PG))        
-                    
-           
+
+        
 ! Strategy 2: Reduction of transpiration due to vapor pressure deficit
 ! Need to bring VPD into this subroutine using the Get command
 ! Example:       Call GET('PLANT', 'CANHT',  CANHT)
@@ -723,22 +725,27 @@ C          ES = MAX(MIN(EDAY,AWEV1),0.0)
 !Original from Battisti et al. 
 !       GSsen = -0.0289*VPDt*VPDt + 1.27       
 !       GSins = -0.0007*VPDt*VPDt + 1.27
+!Note, DT3 has to be divided by 10 for correct order of magnitude in Battisti et al.
+!Because of the format in the ecotype file, it is hard to make small changes to DT3
+! which is 0.0007 for drought tolerant varieties. By allowing for more decimal points
+! and dividing the DT3 coefficient by 10 in the code below, we have more calibation flexibility.
 
+      IF(DT3.GT.0.0) THEN
        GSsen = -DT2*VPDt*VPDt + 1.27       
-       GSins = -DT3*VPDt*VPDt + 1.27
+       GSins = -(DT3/10)*VPDt*VPDt + 1.27
        
-       ga = 10                   
-       RatioEP = (1/(1/GSsen + 1/ga))  / (1/ (1/GSins + 1/ga))
-       Num = 38*(1-exp(-84*GSsen-0.02)/38)+4
-       Den = 38*(1-exp(-84*GSins-0.02)/38)+4
-       RatioPG = Num/Den
+        ga = 10                   
+        RatioEP = (1/(1/GSsen + 1/ga))  / (1/ (1/GSins + 1/ga))
+        Num = 38*(1-exp(-84*GSsen-0.02)/38)+4
+        Den = 38*(1-exp(-84*GSins-0.02)/38)+4
+        RatioPG = Num/Den
        
-!      Now modify EOP and PG based stomatal conductance ratios    
-!      for drought sensitive and insensitive varieties       
-       EOP = EOP * RatioEP
-       PG = PG * RatioPG
-
-      
+!       Now modify EOP and PG based stomatal conductance ratios    
+!       for drought sensitive and insensitive varieties       
+        EOP = EOP * RatioEP
+        PG = PG * RatioPG
+      ENDIF
+   
        
 !GSsen - stomatal conductance for drought sensitive varieties, mol/m2/s
 !GSins - stomatal conductance for drought insentitive varieties, mol/m2/s
