@@ -47,6 +47,7 @@ C-----------------------------------------------------------------------
 !WDB 7/16/25
 !Added ECOTYPE.BLK file to pass drought tolerant parameters to other routines      
       INCLUDE 'ECOTYPE.BLK'
+      REAL Z, ZZ
 !WDB end changes      
       
       CHARACTER*1 ISWWAT
@@ -195,6 +196,33 @@ C-----------------------------------------------------------------------
       ENDIF
       
 !-----------------------------------------------------------------------
+C** WDB 5/20/2026
+C** Drought Tolerance Strategy 5: Change WR(L) from defaulty in soil.sol for 
+C** Water spender cultivars. Implements DT5 coefficient from Ecotype file
+
+      ZZ=0.0
+      IF(DT5.GT.0) THEN
+       DO L=1, NLAYR
+          ZZ = ZZ + DLAYR(L)  !Set ZZ as depth of soil
+        Enddo
+      ENDIF  
+      
+      IF(DT5.GT.0) THEN
+        Z = 0
+      
+        DO L=1, NLAYR
+            Z = Z + DLAYR(L)
+            IF(Z.LE.15) WR(L) = 1.0
+          
+            IF(Z.GT.15) THEN
+               WR(L) = (1 - Z/ZZ)**DT5
+            ENDIF 
+        ENDDO
+      
+      ENDIF
+C** WDB END CHANGES ----------------------------------------------------      
+
+
       TRLDF  = 0.0
       CUMDEP = 0.0
       SUMEX  = 0.0
@@ -244,6 +272,14 @@ C-----------------------------------------------------------------------
         ENDIF
 
 C-----------------------------------------------------------------------
+
+
+
+
+
+C---------------------------------------------------------------------------
+
+
         RLDF(L) = WR(L) * DLAYR(L) * MIN(SWDF,SWEXF)
         IF (CUMDEP .LT. RTDEP) THEN
           TRLDF = TRLDF + RLDF(L)

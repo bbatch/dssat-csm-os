@@ -222,13 +222,15 @@ C-----------------------------------------------------------------------
 !     &          (PHTHRS(K),K=11,12), TRIFOL, R1PPO, OPTBI, SLOBI
 ! 3100FORMAT (A6, 1X, A16, 1X, 2(1X,A2), 7(1X,F5.0), 6X, 
 !     &          3(1X,F5.0), 2(6X), 3(1X,F5.0))
-     
+
+              
+!WDB Added DT1, 2, 3 and 4. 
             READ (C255,3100,IOSTAT=ERR) ECOTYP, ECONAM, IVRGRP, 
      &          IVRTEM, THVAR, (PHTHRS(K), K=1,4), PM06, PM09,
      &          (PHTHRS(K),K=11,12), TRIFOL, R1PPO, OPTBI, SLOBI, DT1,
-     &          DT2, DT3, DT4        
+     &          DT2, DT3, DT4, DT5        
  3100       FORMAT (A6, 1X, A16, 1X, 2(1X,A2), 7(1X,F5.0), 6X, 
-     &          3(1X,F5.0), 2(6X), 3(1X,F5.0),18X,4(1x,F5.3))            
+     &          3(1X,F5.0), 2(6X), 3(1X,F5.0),18X,5(1x,F5.3))            
             
             IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEGC,LNUM)
             IF (ECOTYP .EQ. ECONO) THEN
